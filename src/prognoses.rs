@@ -1,8 +1,8 @@
-const TIME_INTERVAL: usize = 24 * 60;
+const MINUTES_PER_DAY: usize = 24 * 60;
 
 pub struct PricePrognoses {
-    data: [i32; 24 * 60],
+    data: [i32; MINUTES_PER_DAY],
 }
 pub struct ElectricityPrognoses {
-    data: [i32; 24 * 60],
+    data: [i32; MINUTES_PER_DAY],
 }

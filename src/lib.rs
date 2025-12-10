@@ -1,15 +1,13 @@
-use crate::{environment_data::EnvironmentData, schedule::Schedule};
+use crate::{optimizer_context::OptimizerContext, schedule::Schedule};
 
-pub mod action;
 mod schedule;
-mod prognoses;
-mod environment_data;
+mod optimizer_context;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
 
-pub fn optimize(data: EnvironmentData) -> Schedule {
+pub fn optimize(data: OptimizerContext) -> Schedule {
     todo!()
 }
 

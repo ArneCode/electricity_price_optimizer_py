@@ -32,4 +32,10 @@ impl Battery {
     pub fn get_id(&self) -> i32 {
         self.id
     }
+    pub fn get_max_charge(&self) -> i32 {
+        return self.maximum_charge_rate;
+    }
+    pub fn get_max_output(&self) -> i32 {
+        return self.maximum_output_rate;
+    }
 }

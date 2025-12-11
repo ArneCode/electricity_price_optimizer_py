@@ -20,6 +20,8 @@ pub const FORK_FROM_SOURCE: ItemId = 4;
 pub const WIRE: ItemId = -42;
 
 pub type PersistentVariableIndex = (ItemId, Timestamp);
+
+// Third parameter stands whether node stands of incoming, meaning all incoming edges must visit incoming = true, and exit from incoming = false
 pub type PersistentVariableWithCapacityIndex = (ItemId, Timestamp, bool);
 
 pub struct VariableMaker { 
@@ -73,7 +75,7 @@ impl VariableMaker {
         self.persistent_variable_with_capacity_index.get_by_a(&(item_id, timestamp, incoming)).cloned()
     }
 
-    pub fn get_WIRE_index(&self, timestamp: Timestamp) -> Option<u32> {
+    pub fn get_wire_index(&self, timestamp: Timestamp) -> Option<u32> {
         self.persistent_variable_indices.get_by_a(&(WIRE, timestamp)).cloned()
     }
 

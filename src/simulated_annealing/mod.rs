@@ -9,7 +9,7 @@ use crate::{
 };
 
 mod change;
-mod state;
+pub mod state;
 
 pub fn run_simulated_annealing(context: OptimizerContext) {
     let mut state = State::new(context);

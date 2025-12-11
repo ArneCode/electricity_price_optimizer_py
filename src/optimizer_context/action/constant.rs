@@ -5,10 +5,10 @@ pub struct ConstantAction {
     pub end_before: i32,
     pub duration: i32,
     pub consumption: i32,
-    id: i32
+    id: u32
 }
 impl ConstantAction {
-    pub fn new(start_from: i32, end_before: i32, duration: i32, consumption: i32, id: i32) -> Self {
+    pub fn new(start_from: i32, end_before: i32, duration: i32, consumption: i32, id: u32) -> Self {
         assert!(
             start_from + duration <= end_before,
             "Invalid constant action time bounds"
@@ -27,7 +27,7 @@ impl ConstantAction {
     pub fn get_end_before(&self) -> i32 {
         self.end_before
     }
-    pub fn get_id(&self) -> i32 {
+    pub fn get_id(&self) -> u32 {
         self.id
     }
 }

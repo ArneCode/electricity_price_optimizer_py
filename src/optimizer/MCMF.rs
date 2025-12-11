@@ -14,14 +14,14 @@ pub struct MinCostFlow {
     pref: Vec<Option<usize>>,
     con: Vec<usize>,
     dist: Vec<i64>,
-    s: usize,
-    t: usize,
+    s: u32,
+    t: u32,
     pub maxflow: i64,
     pub mincost: i64,
 }
 
 impl MinCostFlow {
-    pub fn new(n: usize, source: usize, target: usize) -> Self {
+    pub fn new(n: usize, source: u32, target: u32) -> Self {
         Self {
             edges: Vec::new(),
             adj: vec![Vec::new(); n],

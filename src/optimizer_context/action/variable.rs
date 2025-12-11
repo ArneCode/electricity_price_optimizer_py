@@ -5,7 +5,7 @@ pub struct VariableAction {
     pub end: i32,
     pub total_consumption: i32,
     pub max_consumption: i32,
-    id: i32,
+    id: u32,
 }
 
 impl VariableAction {
@@ -14,7 +14,7 @@ impl VariableAction {
         end: i32,
         total_consumption: i32,
         max_consumption: i32,
-        id: i32,
+        id: u32,
     ) -> Self {
         assert!(
             start < end,
@@ -34,7 +34,7 @@ impl VariableAction {
     pub fn get_end(&self) -> i32 {
         self.end
     }
-    pub fn get_id(&self) -> i32 {
+    pub fn get_id(&self) -> u32 {
         self.id
     }
 }

@@ -53,4 +53,16 @@ impl OptimizerContext {
     pub fn add_constant_action_to_consumption(&mut self, action: &AssignedConstantAction) {
         self.beyond_control_consumption.add_constant_action(action);
     }
+
+    pub fn get_electricity_price(&self) -> &Rc<Prognoses<i32>> {
+        &self.electricity_price
+    }
+
+    pub fn get_generated_electricity(&self) -> &Rc<Prognoses<i32>> {
+        &self.generated_electricity
+    }
+
+    pub fn get_beyond_control_consumption(&self) -> &Prognoses<i32> {
+        &self.beyond_control_consumption
+    }
 }

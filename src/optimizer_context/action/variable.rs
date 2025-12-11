@@ -40,6 +40,9 @@ impl VariableAction {
     pub fn get_total_consumption(&self) -> i32 {
         self.total_consumption
     }
+    pub fn get_max_consumption(&self) -> i32 {
+        self.max_consumption
+    }
 }
 
 pub struct AssignedVariableAction {

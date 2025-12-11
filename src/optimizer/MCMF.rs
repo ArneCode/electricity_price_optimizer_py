@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{cmp::min, collections::VecDeque};
 
 const INF: i64 = 1_i64 << 60;
 
@@ -96,7 +96,7 @@ impl MinCostFlow {
         }
     }
 
-    pub fn mincostflow(&mut self, flow: i32) {
+    pub fn mincostflow(&mut self) -> (i64, i64) {
         let n = self.adj.len();
         self.con = vec![0; n];
         self.maxflow = 0;
@@ -104,5 +104,7 @@ impl MinCostFlow {
         while self.spfa() {
             self.extend();
         }
+        return (self.maxflow, self.mincost);
     }
+
 }

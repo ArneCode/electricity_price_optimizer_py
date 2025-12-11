@@ -37,9 +37,17 @@ impl MinCostFlow {
 
     pub fn add_edge(&mut self, u: usize, v: usize, capacity: i64, cost: i64) {
         self.adj[u].push(self.edges.len());
-        self.edges.push(Edge { to: v, f: capacity, cost });
+        self.edges.push(Edge {
+            to: v,
+            f: capacity,
+            cost,
+        });
         self.adj[v].push(self.edges.len());
-        self.edges.push(Edge { to: u, f: 0, cost: -cost });
+        self.edges.push(Edge {
+            to: u,
+            f: 0,
+            cost: -cost,
+        });
     }
 
     fn spfa(&mut self) -> bool {
@@ -59,9 +67,7 @@ impl MinCostFlow {
             for i in 0..self.adj[cur].len() {
                 let id = self.adj[cur][i];
                 let to = self.edges[id].to;
-                if self.edges[id].f > 0
-                    && self.dist[to] > self.dist[cur] + self.edges[id].cost
-                {
+                if self.edges[id].f > 0 && self.dist[to] > self.dist[cur] + self.edges[id].cost {
                     self.dist[to] = self.dist[cur] + self.edges[id].cost;
                     self.pref[to] = Some(cur);
                     self.con[to] = id;
@@ -106,5 +112,4 @@ impl MinCostFlow {
         }
         return (self.maxflow, self.mincost);
     }
-
 }

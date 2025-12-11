@@ -43,14 +43,41 @@ pub fn run_simulated_annealing(context: OptimizerContext) {
     // somehow also get the final schedule out of the state
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
 
-//     #[test]
-//     fn test_simulated_annealing() {
-//         let context = OptimizerContext::new(); // Assuming a constructor exists
-//         run_simulated_annealing(context);
-//         // Add assertions to verify the results
-//     }
-// }
+    use rand::rand_core::le;
+
+    use crate::optimizer_context::{
+        action::{
+            constant::{self, ConstantAction},
+            variable::{self, VariableAction},
+        },
+        battery::Battery,
+        prognoses::Prognoses,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_simulated_annealing() {
+        let electricity_price_data = [10; 1440];
+        let generated_electricity_data = [5; 1440];
+        let beyond_control_consumption_data = [20; 1440];
+        let batteries = vec![Battery::new(1000, 10, 10, 7, 1.0, 1)];
+        let constant_actions = vec![Rc::new(ConstantAction::new(0, 60, 120, 15, 2))];
+        let variable_actions = vec![Rc::new(VariableAction::new(1, 200, 300, 50, 3))];
+
+        let context = OptimizerContext::new(
+            Prognoses::new(electricity_price_data),
+            Prognoses::new(generated_electricity_data),
+            Prognoses::new(beyond_control_consumption_data),
+            batteries,
+            constant_actions,
+            variable_actions,
+        ); // Assuming a constructor exists
+        run_simulated_annealing(context);
+        // Add assertions to verify the results
+    }
+}

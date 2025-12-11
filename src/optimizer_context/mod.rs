@@ -5,7 +5,10 @@ pub mod prognoses;
 use std::rc::Rc;
 
 use crate::optimizer_context::{
-    action::{constant::{AssignedConstantAction, ConstantAction}, variable::VariableAction},
+    action::{
+        constant::{AssignedConstantAction, ConstantAction},
+        variable::VariableAction,
+    },
     battery::Battery,
     prognoses::Prognoses,
 };

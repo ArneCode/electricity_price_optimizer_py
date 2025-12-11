@@ -1,4 +1,7 @@
-use crate::simulated_annealing::{change::{Change, random_helpers::sample_centered_int}, state::State};
+use crate::simulated_annealing::{
+    change::{Change, random_helpers::sample_centered_int},
+    state::State,
+};
 use rand::Rng;
 
 pub struct RandomMoveChange {
@@ -21,7 +24,6 @@ impl Change for RandomMoveChange {
 
 impl RandomMoveChange {
     pub fn new_random<R: Rng>(rng: &mut R, state: &State, sigma: f64) -> Self {
-        
         let constant_actions = state.get_constant_actions();
         let action_index = rng.random_range(0..constant_actions.len());
         let action = &constant_actions[action_index];

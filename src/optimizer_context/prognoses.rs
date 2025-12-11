@@ -23,6 +23,10 @@ impl<T: Clone> Prognoses<T> {
             self.data[minute] = value;
         }
     }
+
+    pub fn get_data(&self) -> &[T; MINUTES_PER_DAY] {
+        &self.data
+    }
 }
 
 impl<T: From<i32> + Add<T, Output = T> + Clone> Prognoses<T> {

@@ -1,9 +1,9 @@
 use crate::{optimizer_context::OptimizerContext, schedule::Schedule};
 
-mod schedule;
-mod optimizer_context;
-mod simulated_annealing;
 mod optimizer;
+mod optimizer_context;
+mod schedule;
+mod simulated_annealing;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
@@ -23,5 +23,3 @@ mod tests {
         assert_eq!(result, 4);
     }
 }
-
-

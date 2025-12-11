@@ -4,7 +4,7 @@ pub struct Battery {
     maximum_charge_rate: i32,
     maximum_output_rate: i32,
     efficiency: f32,
-    id: i32
+    id: i32,
 }
 
 impl Battery {
@@ -14,7 +14,7 @@ impl Battery {
         maximum_charge_rate: i32,
         maximum_output_rate: i32,
         efficiency: f32,
-        id: i32
+        id: i32,
     ) -> Self {
         assert!(
             initial_level <= capacity,
@@ -26,7 +26,7 @@ impl Battery {
             maximum_charge_rate,
             maximum_output_rate,
             efficiency,
-            id
+            id,
         }
     }
     pub fn get_id(&self) -> i32 {

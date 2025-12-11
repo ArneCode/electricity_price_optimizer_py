@@ -23,15 +23,6 @@ pub fn calculate_total_flow(context: &OptimizerContext) -> i64 {
     return total;
 }
 
-fn calculate_mcmf_cost(context: &OptimizerContext) -> i64 {
-    let (mut mcmf, _variable_map) = contrusct_flow(context);
-    let (maxflow, mincost) = mcmf.mincostflow();
-    if (maxflow as i64) < calculate_total_flow(context) {
-        panic!("Could not satisfy all flows in MCMF construction");
-    }
-    return mincost;
-}
-
 pub fn add_variable_capacity(
     item_id: i32,
     mf: &mut MinCostFlow,
@@ -50,4 +41,13 @@ pub fn add_variable_capacity(
             0,
         );
     }
+}
+
+pub(crate) fn calculate_mcmf_cost(context: &OptimizerContext) -> i64 {
+    let (mut mcmf, _variable_map) = contrusct_flow(context);
+    let (maxflow, mincost) = mcmf.mincostflow();
+    if (maxflow as i64) < calculate_total_flow(context) {
+        panic!("Could not satisfy all flows in MCMF construction");
+    }
+    return mincost;
 }

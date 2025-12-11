@@ -21,7 +21,7 @@ pub fn contrusct_flow(context: &OptimizerContext) -> (MinCostFlow, VariableMaker
     );
 
     // Go from Source to Fork with Cost = 0, Capacity = total flow to complete tasks
-    let total_flow = 64; // to change
+    let total_flow = calculate_total_flow(context);
     mf.add_edge(
         variable_maker::SOURCE as usize,
         variable_maker::FORK_FROM_SOURCE as usize,
@@ -55,7 +55,7 @@ pub fn contrusct_flow(context: &OptimizerContext) -> (MinCostFlow, VariableMaker
     }
 
     // Network to Wire
-    let network_prognoses = context.get_electricity_price(); // TODO
+    let network_prognoses = context.get_electricity_price();
     for t in 0..MINUTES_PER_DAY {
         mf.add_edge(
             variable_maker::NETWORK as usize,
@@ -64,8 +64,10 @@ pub fn contrusct_flow(context: &OptimizerContext) -> (MinCostFlow, VariableMaker
             *network_prognoses.get(t as usize).unwrap() as i64,
         );
     }
-
+    construct_action(&mut mf, &variable_map, context);
     construct_battery(&mut mf, &variable_map, context);
+
+    add_beyond_control_consumption(&mut mf, &variable_map, context);
 
     return (mf, variable_map);
 }
@@ -75,8 +77,17 @@ fn construct_battery(
     variable_map: &VariableMaker,
     context: &OptimizerContext,
 ) {
-    for b in context.get_batteries() {
+    for b in context.get_batteries() { 
         let id = b.get_id();
+
+        // Initialize battery
+        let first_battery_incoming_num = variable_map.get_battery_variable_index(id, 0, true);
+        let initial_level = b.get_initial_level() as i64;
+        mf.add_edge(variable_maker::SOURCE as usize, first_battery_incoming_num.unwrap() as usize, initial_level, 0);
+
+
+        add_battery_capacity(id, mf, variable_map, b.get_capacity() as i64);
+
         // Wire to Batteries
         for t in 0..MINUTES_PER_DAY {
             let battery_incoming_num = variable_map.get_battery_variable_index(id, t, true);
@@ -117,11 +128,14 @@ fn construct_battery(
 
 fn construct_action(
     mf: &mut MinCostFlow,
-    variable_map: &mut VariableMaker,
+    variable_map: &VariableMaker,
     context: &OptimizerContext,
 ) {
     for a in context.get_variable_actions() {
         let id = a.get_id() as i32;
+
+        add_action_variable_capacity(id, mf, variable_map, a.get_total_consumption() as i64);
+
         // Wire to Actions
         for t in 0..MINUTES_PER_DAY {
             let action_incoming_num = variable_map.get_action_variable_index(id, t, true);
@@ -147,13 +161,16 @@ fn construct_action(
                 0,
             );
         }
+
+        let action_end_num = variable_map.get_action_variable_index(id, MINUTES_PER_DAY - 1, false);
+        mf.add_edge(action_end_num.unwrap() as usize, variable_maker::SINK as usize, INF, 0);
     }
 }
 
 fn add_action_variable_capacity(
     item_id: i32,
     mf: &mut MinCostFlow,
-    variable_map: &mut VariableMaker,
+    variable_map: &VariableMaker,
     cap: i64,
 ) {
     for t in 0..MINUTES_PER_DAY {
@@ -169,10 +186,11 @@ fn add_action_variable_capacity(
         );
     }
 }
+
 fn add_battery_capacity(
     item_id: i32,
     mf: &mut MinCostFlow,
-    variable_map: &mut VariableMaker,
+    variable_map: &VariableMaker,
     cap: i64,
 ) {
     for t in 0..MINUTES_PER_DAY {
@@ -187,4 +205,32 @@ fn add_battery_capacity(
             0,
         );
     }
+}
+
+fn add_beyond_control_consumption(
+    mf: &mut MinCostFlow,
+    variable_map: &VariableMaker,
+    context: &OptimizerContext,
+) {
+    let beyond_control = context.get_beyond_control_consumption();
+
+    for t in 0..MINUTES_PER_DAY {
+        let wire_num = variable_map.get_wire_index(t).unwrap();
+
+        mf.add_edge(
+            wire_num as usize,
+            variable_maker::SINK as usize,
+            *beyond_control.get(t as usize).unwrap() as i64,
+            0,
+        );
+    }
+}
+
+fn calculate_total_flow(context: &OptimizerContext) -> i64 {
+    let mut total = 0;
+    for action in context.get_variable_actions() {
+        total += action.get_total_consumption() as i64;
+    }
+
+    return total;
 }

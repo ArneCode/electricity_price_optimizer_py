@@ -38,4 +38,10 @@ impl Battery {
     pub fn get_max_output(&self) -> i32 {
         return self.maximum_output_rate;
     }
+    pub fn get_capacity(&self) -> i32 {
+        return self.capacity;
+    }
+    pub fn get_initial_level(&self) -> i32 {
+        return self.initial_level;
+    }
 }

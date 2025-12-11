@@ -37,6 +37,9 @@ impl VariableAction {
     pub fn get_id(&self) -> u32 {
         self.id
     }
+    pub fn get_total_consumption(&self) -> i32 {
+        self.total_consumption
+    }
 }
 
 pub struct AssignedVariableAction {

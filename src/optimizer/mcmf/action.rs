@@ -7,11 +7,13 @@ pub(crate) fn construct_action(
 ) {
     for a in context.get_variable_actions() {
         let id = a.get_id() as i32;
+        let task_start = a.get_start() as u32;
+        let task_end = a.get_end() as u32;
 
         add_variable_capacity(id, mf, variable_map, a.get_total_consumption() as i64);
 
         // Wire to Actions
-        for t in 0..MINUTES_PER_DAY {
+        for t in task_start..task_end {
             let action_incoming_num = variable_map.get_persistent_variable_index(id, t, true);
             let action_max_consumption = a.get_max_consumption() as i64;
 

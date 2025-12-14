@@ -73,7 +73,7 @@ mod tests {
         let generated_electricity_data = [0; 1440];
         let beyond_control_consumption_data = [0; 1440];
         let batteries = vec![Battery::new(10, 0, 10, 7, 1.0, 1)];
-        let constant_actions = vec![Rc::new(ConstantAction::new(0, 10, 2, 100, 2))]; // no use
+        let constant_actions = vec![Rc::new(ConstantAction::new(0, 10, 2, 100, 2))];
         let variable_actions = vec![Rc::new(VariableAction::new(0, 10, 40, 10, 3))];
 
         let context = OptimizerContext::new(

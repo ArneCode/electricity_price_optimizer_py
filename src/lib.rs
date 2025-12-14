@@ -1,6 +1,6 @@
 use crate::{optimizer_context::OptimizerContext, schedule::Schedule};
 
-mod optimizer;
+pub mod optimizer;
 mod optimizer_context;
 mod schedule;
 mod simulated_annealing;

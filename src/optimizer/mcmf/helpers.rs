@@ -20,6 +20,7 @@ pub fn calculate_total_flow(context: &OptimizerContext) -> i64 {
         .iter()
         .to_owned()
         .sum::<i32>() as i64;
+    println!("total should be: {}", total);
     return total;
 }
 

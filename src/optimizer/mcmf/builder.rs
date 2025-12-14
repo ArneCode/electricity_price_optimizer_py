@@ -24,7 +24,7 @@ pub fn contrusct_flow(context: &OptimizerContext) -> (MinCostFlow, VariableMaker
     mcmf.add_edge(
         variable_maker::SOURCE as usize,
         variable_maker::FORK_FROM_SOURCE as usize,
-        total_flow,
+        INF,
         0,
     );
 

@@ -40,11 +40,8 @@ impl VariableMaker {
         for var_action in context.get_variable_actions().iter() {
             let item_id = var_action.get_id() as ItemId;
             for t in 0..MINUTES_PER_DAY {
-                persistent_with_capacity
-                    .insert((item_id as ItemId, t as Timestamp, false), variable_count);
-                variable_count += 1;
-                persistent_with_capacity
-                    .insert((item_id as ItemId, t as Timestamp, true), variable_count);
+                persistent
+                    .insert((item_id as ItemId, t as Timestamp), variable_count);
                 variable_count += 1;
             }
         }
@@ -74,7 +71,7 @@ impl VariableMaker {
     }
 
 
-    pub fn get_persistent_variable_index(
+    pub fn get_persistent_variable_with_capacity_index(
         &self,
         item_id: ItemId,
         timestamp: Timestamp,
@@ -82,6 +79,16 @@ impl VariableMaker {
     ) -> Option<u32> {
         self.persistent_variable_with_capacity_index
             .get_by_a(&(item_id, timestamp, incoming))
+            .cloned()
+    }
+
+    pub fn get_persistent_variable_index(
+        &self,
+        item_id: ItemId,
+        timestamp: Timestamp,
+    ) -> Option<u32> {
+        self.persistent_variable_indices
+            .get_by_a(&(item_id, timestamp))
             .cloned()
     }
 

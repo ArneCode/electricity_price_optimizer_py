@@ -32,10 +32,10 @@ pub fn add_variable_capacity(
     for t in 0..MINUTES_PER_DAY {
         mf.add_edge(
             variable_map
-                .get_persistent_variable_index(item_id, t, true)
+                .get_persistent_variable_with_capacity_index(item_id, t, true)
                 .unwrap() as usize,
             variable_map
-                .get_persistent_variable_index(item_id, t, false)
+                .get_persistent_variable_with_capacity_index(item_id, t, false)
                 .unwrap() as usize,
             cap,
             0,

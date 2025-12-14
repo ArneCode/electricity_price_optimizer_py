@@ -10,11 +10,9 @@ pub(crate) fn construct_action(
         let task_start = a.get_start() as u32;
         let task_end = a.get_end() as u32;
 
-        add_variable_capacity(id, mf, variable_map, a.get_total_consumption() as i64);
-
         // Wire to Actions
         for t in task_start..task_end {
-            let action_incoming_num = variable_map.get_persistent_variable_index(id, t, true);
+            let action_incoming_num = variable_map.get_persistent_variable_index(id, t);
             let action_max_consumption = a.get_max_consumption() as i64;
 
             mf.add_edge(
@@ -27,8 +25,8 @@ pub(crate) fn construct_action(
 
         // Action persistence
         for t in 0..(MINUTES_PER_DAY - 1) {
-            let action_current_num = variable_map.get_persistent_variable_index(id, t, false);
-            let action_next_num = variable_map.get_persistent_variable_index(id, t + 1, true);
+            let action_current_num = variable_map.get_persistent_variable_index(id, t);
+            let action_next_num = variable_map.get_persistent_variable_index(id, t + 1);
 
             mf.add_edge(
                 action_current_num.unwrap() as usize,
@@ -38,11 +36,11 @@ pub(crate) fn construct_action(
             );
         }
 
-        let action_end_num = variable_map.get_persistent_variable_index(id, MINUTES_PER_DAY - 1, false);
+        let action_end_num = variable_map.get_persistent_variable_index(id, MINUTES_PER_DAY - 1);
         mf.add_edge(
             action_end_num.unwrap() as usize,
             variable_maker::SINK as usize,
-            INF,
+            a.get_total_consumption() as i64,
             0,
         );
     }

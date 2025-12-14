@@ -9,7 +9,7 @@ pub(crate) fn construct_battery(
         let id = b.get_id();
 
         // Initialize battery
-        let first_battery_incoming_num = variable_map.get_persistent_variable_index(id, 0, true);
+        let first_battery_incoming_num = variable_map.get_persistent_variable_with_capacity_index(id, 0, true);
         let initial_level = b.get_initial_level() as i64;
         mf.add_edge(
             variable_maker::SOURCE as usize,
@@ -22,8 +22,8 @@ pub(crate) fn construct_battery(
 
         // Wire to Batteries
         for t in 0..MINUTES_PER_DAY {
-            let battery_incoming_num = variable_map.get_persistent_variable_index(id, t, true);
-            let battery_outgoing_num = variable_map.get_persistent_variable_index(id, t, false);
+            let battery_incoming_num = variable_map.get_persistent_variable_with_capacity_index(id, t, true);
+            let battery_outgoing_num = variable_map.get_persistent_variable_with_capacity_index(id, t, false);
             let wire_num = variable_map.get_wire_index(t).unwrap();
 
             // Wire to battery
@@ -45,8 +45,8 @@ pub(crate) fn construct_battery(
 
         // Battery persistence
         for t in 0..(MINUTES_PER_DAY - 1) {
-            let battery_current_num = variable_map.get_persistent_variable_index(id, t, false);
-            let battery_next_num = variable_map.get_persistent_variable_index(id, t + 1, true);
+            let battery_current_num = variable_map.get_persistent_variable_with_capacity_index(id, t, false);
+            let battery_next_num = variable_map.get_persistent_variable_with_capacity_index(id, t + 1, true);
 
             mf.add_edge(
                 battery_current_num.unwrap() as usize,

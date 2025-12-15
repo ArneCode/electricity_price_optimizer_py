@@ -127,7 +127,9 @@ impl MinCostFlow {
         }
 
         for i in 0..self.dist.len() {
-            self.dist[i] -= self.pi[self.s] - self.pi[i];
+            if (self.pi[i] != INF) {
+                self.dist[i] -= self.pi[self.s] - self.pi[i];
+            }
         }
 
         true

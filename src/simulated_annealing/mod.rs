@@ -40,7 +40,7 @@ pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
                 change.undo(&mut state);
             }
         }
-        temperature *= 0.9; // Cool down
+        temperature *= 0.99; // Cool down
         println!("temperature: {temperature}, cost: {old_cost}");
     }
 

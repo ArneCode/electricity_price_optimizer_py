@@ -1,6 +1,13 @@
-use crate::{optimizer::{mcmf::MinCostFlow, variable_maker::{self, VariableMaker}}, optimizer_context::OptimizerContext};
+use crate::{
+    optimizer::{
+        mcmf::MinCostFlow,
+        variable_maker::{self, VariableMaker},
+    },
+    optimizer_context::OptimizerContext,
+    time::{STEPS_PER_DAY, Time},
+};
 
-use super::helpers::{add_variable_capacity, MINUTES_PER_DAY, INF};
+use super::helpers::{INF, add_variable_capacity};
 
 pub(crate) fn add_beyond_control_consumption(
     mf: &mut MinCostFlow,
@@ -9,13 +16,13 @@ pub(crate) fn add_beyond_control_consumption(
 ) {
     let beyond_control = context.get_beyond_control_consumption();
 
-    for t in 0..MINUTES_PER_DAY {
+    for t in 0..STEPS_PER_DAY {
         let wire_num = variable_map.get_wire_index(t).unwrap();
 
         mf.add_edge(
             wire_num as usize,
             variable_maker::SINK as usize,
-            *beyond_control.get(t as usize).unwrap() as i64,
+            *beyond_control.get(Time::from_timestep(t)).unwrap() as i64,
             0,
         );
     }

@@ -1,4 +1,14 @@
-use crate::{optimizer::{mcmf::{MinCostFlow, helpers::{INF, MINUTES_PER_DAY, add_variable_capacity}}, variable_maker::{self, VariableMaker}}, optimizer_context::OptimizerContext};
+use crate::{
+    optimizer::{
+        mcmf::{
+            MinCostFlow,
+            helpers::{INF, add_variable_capacity},
+        },
+        variable_maker::{self, VariableMaker},
+    },
+    optimizer_context::OptimizerContext,
+    time::STEPS_PER_DAY,
+};
 
 pub(crate) fn construct_action(
     mf: &mut MinCostFlow,
@@ -7,8 +17,8 @@ pub(crate) fn construct_action(
 ) {
     for a in context.get_variable_actions() {
         let id = a.get_id() as i32;
-        let task_start = a.get_start() as u32;
-        let task_end = a.get_end() as u32;
+        let task_start = a.get_start().to_timestep();
+        let task_end = a.get_end().to_timestep();
 
         // Wire to Actions
         for t in task_start..task_end {
@@ -24,7 +34,7 @@ pub(crate) fn construct_action(
         }
 
         // Action persistence
-        for t in 0..(MINUTES_PER_DAY - 1) {
+        for t in 0..(STEPS_PER_DAY - 1) {
             let action_current_num = variable_map.get_persistent_variable_index(id, t);
             let action_next_num = variable_map.get_persistent_variable_index(id, t + 1);
 
@@ -36,7 +46,7 @@ pub(crate) fn construct_action(
             );
         }
 
-        let action_end_num = variable_map.get_persistent_variable_index(id, MINUTES_PER_DAY - 1);
+        let action_end_num = variable_map.get_persistent_variable_index(id, STEPS_PER_DAY - 1);
         mf.add_edge(
             action_end_num.unwrap() as usize,
             variable_maker::SINK as usize,

@@ -1,12 +1,12 @@
 // optimizer/mcmf/helpers.rs
-pub const MINUTES_PER_DAY: u32 = 60 * 24;
+// pub const MINUTES_PER_DAY: u32 = 60 * 24;
 pub const INF: i64 = 1_i64 << 60;
 
 use crate::optimizer::mcmf::MinCostFlow;
 use crate::optimizer::mcmf::builder::contrusct_flow;
 use crate::optimizer::variable_maker::VariableMaker;
 use crate::optimizer_context::OptimizerContext;
-
+use crate::time::STEPS_PER_DAY;
 
 pub fn calculate_total_flow(context: &OptimizerContext) -> i64 {
     let mut total = 0;
@@ -29,7 +29,7 @@ pub fn add_variable_capacity(
     variable_map: &VariableMaker,
     cap: i64,
 ) {
-    for t in 0..MINUTES_PER_DAY {
+    for t in 0..STEPS_PER_DAY {
         mf.add_edge(
             variable_map
                 .get_persistent_variable_with_capacity_index(item_id, t, true)

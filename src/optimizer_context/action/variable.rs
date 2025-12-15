@@ -1,8 +1,10 @@
 use std::rc::Rc;
 
+use crate::time::Time;
+
 pub struct VariableAction {
-    pub start: i32,
-    pub end: i32,
+    pub start: Time,
+    pub end: Time,
     pub total_consumption: i32,
     pub max_consumption: i32,
     id: u32,
@@ -10,8 +12,8 @@ pub struct VariableAction {
 
 impl VariableAction {
     pub fn new(
-        start: i32,
-        end: i32,
+        start: Time,
+        end: Time,
         total_consumption: i32,
         max_consumption: i32,
         id: u32,
@@ -28,10 +30,10 @@ impl VariableAction {
             id,
         }
     }
-    pub fn get_start(&self) -> i32 {
+    pub fn get_start(&self) -> Time {
         self.start
     }
-    pub fn get_end(&self) -> i32 {
+    pub fn get_end(&self) -> Time {
         self.end
     }
     pub fn get_id(&self) -> u32 {
@@ -53,8 +55,8 @@ pub struct AssignedVariableAction {
 impl AssignedVariableAction {
     pub fn new(action: Rc<VariableAction>, consumption: Vec<u32>) -> Self {
         assert_eq!(
-            consumption.len() as i32,
-            action.end - action.start,
+            consumption.len() as u32,
+            action.end.to_timestep() - action.start.to_timestep(),
             "Consumption list length does not match action duration"
         );
         Self {

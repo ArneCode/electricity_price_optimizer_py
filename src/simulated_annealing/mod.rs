@@ -14,7 +14,7 @@ pub mod state;
 
 pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
     let mut state = State::new(context);
-    let mut temperature: f64 = 1000.0;
+    let mut temperature: f64 = 10.0;
 
     let mut rng = rand::rng();
 
@@ -40,7 +40,7 @@ pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
                 change.undo(&mut state);
             }
         }
-        temperature *= 0.99; // Cool down
+        temperature *= 0.9; // Cool down
         println!("temperature: {temperature}, cost: {old_cost}");
     }
 
@@ -55,25 +55,40 @@ mod tests {
 
     use rand::rand_core::le;
 
-    use crate::optimizer_context::{
-        action::{
-            constant::{self, ConstantAction},
-            variable::{self, VariableAction},
+    use crate::{
+        optimizer_context::{
+            action::{
+                constant::{self, ConstantAction},
+                variable::{self, VariableAction},
+            },
+            battery::Battery,
+            prognoses::Prognoses,
         },
-        battery::Battery,
-        prognoses::Prognoses,
+        time::{STEPS_PER_DAY, Time},
     };
 
     use super::*;
 
     #[test]
     fn test_simulated_annealing() {
-        let electricity_price_data = [10; 1440];
-        let generated_electricity_data = [0; 1440];
-        let beyond_control_consumption_data = [20; 1440];
+        let electricity_price_data = [10; STEPS_PER_DAY as usize];
+        let generated_electricity_data = [100; STEPS_PER_DAY as usize];
+        let beyond_control_consumption_data = [20; STEPS_PER_DAY as usize];
         let batteries = vec![Battery::new(1000, 10, 10, 7, 1.0, 1)];
-        let constant_actions = vec![Rc::new(ConstantAction::new(0, 50, 30, 40, 2))];
-        let variable_actions = vec![Rc::new(VariableAction::new(1, 10, 300, 50, 3))];
+        let constant_actions = vec![Rc::new(ConstantAction::new(
+            Time::new(0, 0),
+            Time::new(2, 0),
+            Time::new(1, 0),
+            300,
+            2,
+        ))];
+        let variable_actions = vec![Rc::new(VariableAction::new(
+            Time::new(1, 15),
+            Time::new(10, 0),
+            300,
+            100,
+            3,
+        ))];
 
         let context = OptimizerContext::new(
             Prognoses::new(electricity_price_data),

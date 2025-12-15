@@ -1,9 +1,12 @@
-use crate::optimizer_context::{
-    OptimizerContext,
-    action::{
-        constant::{self, AssignedConstantAction},
-        variable::VariableAction,
+use crate::{
+    optimizer_context::{
+        OptimizerContext,
+        action::{
+            constant::{self, AssignedConstantAction},
+            variable::VariableAction,
+        },
     },
+    time::Time,
 };
 
 pub struct State {
@@ -18,10 +21,11 @@ impl State {
             .get_constant_actions()
             .iter()
             .map(|action| {
-                let start = action.get_start_from();
-                let end = action.get_end_before() - action.duration;
-                let middle = (start + end) / 2;
-                AssignedConstantAction::new(action.clone(), middle)
+                let start_minutes = action.get_start_from().get_minutes();
+                let end_minutes =
+                    action.get_end_before().get_minutes() - action.duration.get_minutes();
+                let middle_minutes = (start_minutes + end_minutes) / 2;
+                AssignedConstantAction::new(action.clone(), Time::new(0, middle_minutes))
             })
             .collect();
         Self {

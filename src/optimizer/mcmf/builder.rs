@@ -1,10 +1,11 @@
 use crate::optimizer::mcmf::MCMF::MinCostFlow;
-use crate::optimizer::mcmf::helpers::{INF, MINUTES_PER_DAY};
+use crate::optimizer::mcmf::helpers::INF;
 use crate::optimizer::variable_maker::{self, VariableMaker};
 use crate::optimizer_context::OptimizerContext;
+use crate::time::{STEPS_PER_DAY, Time};
 
-use super::battery::construct_battery;
 use super::action::construct_action;
+use super::battery::construct_battery;
 use super::consumption::add_beyond_control_consumption;
 use super::helpers::calculate_total_flow;
 
@@ -44,23 +45,23 @@ pub fn contrusct_flow(context: &OptimizerContext) -> (MinCostFlow, VariableMaker
 
     // Generator to Wire
     let generator_prognoses = context.get_generated_electricity(); // TODO
-    for t in 0..MINUTES_PER_DAY {
+    for t in 0..STEPS_PER_DAY {
         mcmf.add_edge(
             variable_maker::GENERATOR as usize,
             variable_map.get_wire_index(t).unwrap() as usize,
-            *generator_prognoses.get(t as usize).unwrap() as i64,
+            *generator_prognoses.get(Time::from_timestep(t)).unwrap() as i64,
             0,
         );
     }
 
     // Network to Wire
     let network_prognoses = context.get_electricity_price();
-    for t in 0..MINUTES_PER_DAY {
+    for t in 0..STEPS_PER_DAY {
         mcmf.add_edge(
             variable_maker::NETWORK as usize,
             variable_map.get_wire_index(t).unwrap() as usize,
             INF,
-            *network_prognoses.get(t as usize).unwrap() as i64,
+            *network_prognoses.get(Time::from_timestep(t)).unwrap() as i64,
         );
     }
 

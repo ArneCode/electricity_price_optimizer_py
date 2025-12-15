@@ -119,12 +119,15 @@ impl MinCostFlow {
             }
         }
 
+        if !self.pref[self.t].is_some() {
+            return false;
+        }
+
         for i in 0..self.dist.len() {
             self.dist[i] -= self.pi[self.s] - self.pi[i];
         }
 
-        // did we reach t?
-        self.pref[self.t].is_some()
+        true
     }
 
     fn extend(&mut self) {

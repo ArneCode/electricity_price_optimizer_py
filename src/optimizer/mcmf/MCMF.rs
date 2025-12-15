@@ -1,21 +1,23 @@
-use std::collections::VecDeque;
+use std::{
+    cmp::{Reverse, min},
+    collections::{BinaryHeap, VecDeque},
+};
 
 const INF: i64 = 1_i64 << 60;
 
-#[derive(Clone, Copy)]
 struct Edge {
     to: usize,
-    rev: usize, // Store index of reverse edge for O(1) access
     f: i64,
     cost: i64,
 }
 
 pub struct MinCostFlow {
-    graph: Vec<Vec<Edge>>,
+    edges: Vec<Edge>,
+    adj: Vec<Vec<usize>>,
+    pref: Vec<Option<usize>>,
+    con: Vec<usize>,
     dist: Vec<i64>,
-    pref: Vec<Option<(usize, usize)>>, // (node, edge_index)
-    inqueue: Vec<bool>,
-    queue: VecDeque<usize>, // Reused queue buffer
+    pi: Vec<i64>,
     s: usize,
     t: usize,
     pub maxflow: i64,
@@ -25,11 +27,12 @@ pub struct MinCostFlow {
 impl MinCostFlow {
     pub fn new(n: usize, source: usize, target: usize) -> Self {
         Self {
-            graph: vec![Vec::new(); n],
-            dist: vec![INF; n],
-            pref: vec![None; n],
-            inqueue: vec![false; n],
-            queue: VecDeque::with_capacity(n), // Pre-allocate queue
+            edges: Vec::new(),
+            adj: vec![Vec::new(); n],
+            pref: Vec::new(),
+            con: Vec::new(),
+            dist: Vec::new(),
+            pi: Vec::new(),
             s: source,
             t: target,
             maxflow: 0,
@@ -38,92 +41,129 @@ impl MinCostFlow {
     }
 
     pub fn add_edge(&mut self, u: usize, v: usize, capacity: i64, cost: i64) {
-        let fwd_idx = self.graph[u].len();
-        let rev_idx = self.graph[v].len();
-
-        self.graph[u].push(Edge {
+        self.adj[u].push(self.edges.len());
+        self.edges.push(Edge {
             to: v,
-            rev: rev_idx,
             f: capacity,
             cost,
         });
-        self.graph[v].push(Edge {
+        self.adj[v].push(self.edges.len());
+        self.edges.push(Edge {
             to: u,
-            rev: fwd_idx,
             f: 0,
             cost: -cost,
         });
     }
 
     fn spfa(&mut self) -> bool {
-        // RESET buffers without reallocation
-        self.dist.fill(INF);
-        self.pref.fill(None);
-        // inqueue is guaranteed to be all false at end of loop, no need to fill
+        let n = self.adj.len();
+        self.pref = vec![None; n];
+        self.dist = vec![INF; n];
+        let mut inqueue = vec![false; n];
+        let mut queue = VecDeque::new();
 
         self.dist[self.s] = 0;
-        self.queue.push_back(self.s);
-        self.inqueue[self.s] = true;
+        self.pref[self.s] = Some(self.s);
+        inqueue[self.s] = true;
+        queue.push_back(self.s);
 
-        while let Some(u) = self.queue.pop_front() {
-            self.inqueue[u] = false;
-
-            for i in 0..self.graph[u].len() {
-                let e = self.graph[u][i]; // Copy is cheap (struct is small)
-
-                if e.f > 0 && self.dist[e.to] > self.dist[u] + e.cost {
-                    self.dist[e.to] = self.dist[u] + e.cost;
-                    self.pref[e.to] = Some((u, i));
-
-                    if !self.inqueue[e.to] {
-                        // SLF Optimization: If new dist is smaller than front of queue, push front
-                        if let Some(&front) = self.queue.front() {
-                            if self.dist[e.to] < self.dist[front] {
-                                self.queue.push_front(e.to);
-                            } else {
-                                self.queue.push_back(e.to);
-                            }
-                        } else {
-                            self.queue.push_back(e.to);
-                        }
-                        self.inqueue[e.to] = true;
+        while let Some(cur) = queue.pop_front() {
+            inqueue[cur] = false;
+            for i in 0..self.adj[cur].len() {
+                let id = self.adj[cur][i];
+                let to = self.edges[id].to;
+                if self.edges[id].f > 0 && self.dist[to] > self.dist[cur] + self.edges[id].cost {
+                    self.dist[to] = self.dist[cur] + self.edges[id].cost;
+                    self.pref[to] = Some(cur);
+                    self.con[to] = id;
+                    if !inqueue[to] {
+                        inqueue[to] = true;
+                        queue.push_back(to);
                     }
                 }
             }
         }
 
-        self.dist[self.t] != INF
+        self.pref[self.t].is_some()
+    }
+
+    fn dijkstra(&mut self) -> bool {
+        let n = self.adj.len();
+        // reset predecessor, distance
+        self.pref = vec![None; n];
+        self.dist = vec![INF; n];
+
+        // min‐heap of (dist, node)
+        let mut heap = BinaryHeap::new();
+
+        // start at source
+        self.dist[self.s] = 0;
+        self.pref[self.s] = Some(self.s);
+        heap.push(Reverse((0, self.s)));
+
+        while let Some(Reverse((d, u))) = heap.pop() {
+            // stale entry?
+            if d != self.dist[u] {
+                continue;
+            }
+            // relax all residual edges out of u
+            for &id in &self.adj[u] {
+                let e = &self.edges[id];
+                if e.f > 0 {
+                    let v = e.to;
+                    let nd = d + (e.cost - self.pi[v] + self.pi[u]);
+                    if nd < self.dist[v] {
+                        self.dist[v] = nd;
+                        self.pref[v] = Some(u);
+                        self.con[v] = id;
+                        heap.push(Reverse((nd, v)));
+                    }
+                }
+            }
+        }
+
+        for i in 0..self.dist.len() {
+            self.dist[i] -= self.pi[self.s] - self.pi[i];
+        }
+
+        // did we reach t?
+        self.pref[self.t].is_some()
+    }
+
+    fn extend(&mut self) {
+        let mut w = INF;
+        let mut u = self.t;
+        while self.pref[u] != Some(u) {
+            w = w.min(self.edges[self.con[u]].f);
+            u = self.pref[u].unwrap();
+        }
+
+        self.maxflow += w;
+        self.mincost += self.dist[self.t] * w;
+
+        u = self.t;
+        while self.pref[u] != Some(u) {
+            let edge_id = self.con[u];
+            self.edges[edge_id].f -= w;
+            self.edges[edge_id ^ 1].f += w;
+            u = self.pref[u].unwrap();
+        }
+
+        for i in 0..self.dist.len() {
+            self.pi[i] = self.dist[i];
+        }
     }
 
     pub fn mincostflow(&mut self) -> (i64, i64) {
+        let n = self.adj.len();
+        self.con = vec![0; n];
+        self.pi = vec![0; n];
         self.maxflow = 0;
         self.mincost = 0;
-
-        while self.spfa() {
-            let mut flow = INF;
-            let mut cur = self.t;
-
-            // Backtrack to find bottleneck
-            while cur != self.s {
-                let (prev, idx) = self.pref[cur].unwrap();
-                flow = flow.min(self.graph[prev][idx].f);
-                cur = prev;
-            }
-
-            // Apply flow
-            cur = self.t;
-            while cur != self.s {
-                let (prev, idx) = self.pref[cur].unwrap();
-                let rev_idx = self.graph[prev][idx].rev;
-
-                self.graph[prev][idx].f -= flow;
-                self.graph[cur][rev_idx].f += flow;
-
-                self.mincost += flow * self.graph[prev][idx].cost;
-                cur = prev;
-            }
-            self.maxflow += flow;
+        while self.dijkstra() {
+            // while self.spfa() {
+            self.extend();
         }
-        (self.maxflow, self.mincost)
+        return (self.maxflow, self.mincost);
     }
 }

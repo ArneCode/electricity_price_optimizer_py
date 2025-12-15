@@ -4,7 +4,7 @@ use std::{
     io::{self, Read, Write},
 };
 
-const INF: i64 = 1_i64 << 60;
+const INF: i64 = 1_i64 << 58;
 
 #[derive(Clone)]
 struct Edge {
@@ -35,8 +35,8 @@ impl MinCostFlow {
             con: Vec::new(),
             dist: Vec::new(),
             pi: Vec::new(),
-            s: 0,
-            t: 0,
+            s: s,
+            t: t,
             maxflow: 0,
             mincost: 0,
         }
@@ -101,8 +101,8 @@ impl MinCostFlow {
             // relax all residual edges out of u
             for &id in &self.adj[u] {
                 let e = &self.edges[id];
-                if e.f > 0 {
-                    let v = e.to;
+                let v = e.to;
+                if e.f > 0 && self.pi[u] != INF && self.pi[v] != INF {
                     let nd = d + (e.cost - self.pi[v] + self.pi[u]);
                     if nd < self.dist[v] {
                         self.dist[v] = nd;
@@ -119,9 +119,7 @@ impl MinCostFlow {
         }
 
         for i in 0..self.dist.len() {
-            if self.pi[i] != INF {
-                self.dist[i] -= self.pi[self.s] - self.pi[i];
-            }
+            self.dist[i] -= self.pi[self.s] - self.pi[i];
         }
 
         true
@@ -148,7 +146,9 @@ impl MinCostFlow {
         }
 
         for i in 0..self.pi.len() {
-          self.pi[i] = self.dist[i];
+            if self.dist[i] < INF {
+                self.pi[i] += self.dist[i];
+            }
         }
     }
 

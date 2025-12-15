@@ -11,7 +11,61 @@ use crate::{
 
 mod change;
 pub mod state;
-
+/// Runs the simulated annealing algorithm to optimize electricity usage and costs.
+///
+/// This function takes an `OptimizerContext` containing the necessary data such as
+/// electricity price prognoses, generated electricity prognoses, beyond-control
+/// consumption prognoses, battery configurations, and actions (both constant and variable).
+/// It applies the simulated annealing optimization technique to find a near-optimal
+/// solution for electricity usage scheduling.
+///
+/// # Parameters
+/// - `context`: An `OptimizerContext` instance containing all the required data for optimization.
+///
+/// # Returns
+/// The result of the simulated annealing process, which could be a schedule or a cost value,
+/// depending on the implementation.
+///
+/// # Example
+/// ```
+/// let electricity_price_data = [10; STEPS_PER_DAY as usize];
+/// let generated_electricity_data = [100; STEPS_PER_DAY as usize];
+/// let beyond_control_consumption_data = [20; STEPS_PER_DAY as usize];
+/// let batteries = vec![Battery::new(1000, 10, 10, 7, 1.0, 1)];
+/// let constant_actions = vec![Rc::new(ConstantAction::new(
+///     Time::new(0, 0),
+///     Time::new(2, 0),
+///     Time::new(1, 0),
+///     300,
+///     2,
+/// ))];
+/// let variable_actions = vec![Rc::new(VariableAction::new(
+///     Time::new(1, 15),
+///     Time::new(10, 0),
+///     300,
+///     100,
+///     3,
+/// ))];
+///
+/// let context = OptimizerContext::new(
+///     Prognoses::new(electricity_price_data),
+///     Prognoses::new(generated_electricity_data),
+///     Prognoses::new(beyond_control_consumption_data),
+///     batteries,
+///     constant_actions,
+///     variable_actions,
+/// );
+/// let result = run_simulated_annealing(context);
+/// println!("Optimization result: {result}");
+/// ```
+///
+/// # Notes
+/// - Ensure that the `OptimizerContext` is properly initialized with valid data.
+/// - The algorithm may not guarantee the absolute optimal solution but aims to find
+///   a good approximation within a reasonable time frame.
+///
+/// # Panics
+/// This function may panic if the `OptimizerContext` contains invalid or inconsistent data.
 pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
     let mut state = State::new(context);
     let mut temperature: f64 = 10.0;
@@ -50,6 +104,7 @@ pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
 }
 
 #[cfg(test)]
+
 mod tests {
     use std::rc::Rc;
 

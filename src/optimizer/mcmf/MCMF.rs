@@ -1,5 +1,5 @@
 use std::{
-    cmp::{Reverse},
+    cmp::Reverse,
     collections::{BinaryHeap, VecDeque},
     io::{self, Read, Write},
 };
@@ -44,9 +44,17 @@ impl MinCostFlow {
 
     pub fn add_edge(&mut self, u: usize, v: usize, cap: i64, cost: i64) {
         self.adj[u].push(self.edges.len());
-        self.edges.push(Edge { to: v, f: cap, cost });
+        self.edges.push(Edge {
+            to: v,
+            f: cap,
+            cost,
+        });
         self.adj[v].push(self.edges.len());
-        self.edges.push(Edge { to: u, f: 0, cost: -cost });
+        self.edges.push(Edge {
+            to: u,
+            f: 0,
+            cost: -cost,
+        });
     }
 
     fn spfa(&mut self) -> bool {
@@ -84,7 +92,7 @@ impl MinCostFlow {
         // reset predecessor, distance
         self.pref = vec![usize::MAX; n];
         self.dist = vec![INF; n];
-        
+
         // min‐heap of (dist, node)
         let mut heap = BinaryHeap::new();
 
@@ -158,7 +166,7 @@ impl MinCostFlow {
         self.pi = vec![0; n];
         self.maxflow = 0;
         self.mincost = 0;
-        while self.dijkstra() {
+        while self.spfa() {
             self.extend();
         }
         return (self.mincost, self.maxflow);

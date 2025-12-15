@@ -13,7 +13,7 @@ struct Edge {
     cost: i64,
 }
 
-struct MinCostFlow {
+pub struct MinCostFlow {
     edges: Vec<Edge>,
     adj: Vec<Vec<usize>>,
     pref: Vec<usize>,
@@ -27,7 +27,7 @@ struct MinCostFlow {
 }
 
 impl MinCostFlow {
-    fn new(n: usize) -> Self {
+    pub fn new(n: usize, s: usize, t: usize) -> Self {
         Self {
             edges: Vec::new(),
             adj: vec![Vec::new(); n],
@@ -42,7 +42,7 @@ impl MinCostFlow {
         }
     }
 
-    fn add_edge(&mut self, u: usize, v: usize, cap: i64, cost: i64) {
+    pub fn add_edge(&mut self, u: usize, v: usize, cap: i64, cost: i64) {
         self.adj[u].push(self.edges.len());
         self.edges.push(Edge { to: v, f: cap, cost });
         self.adj[v].push(self.edges.len());
@@ -152,9 +152,7 @@ impl MinCostFlow {
         }
     }
 
-    fn mincostflow(&mut self, s: usize, t: usize) {
-        self.s = s;
-        self.t = t;
+    pub fn mincostflow(&mut self) -> (i64, i64) {
         let n = self.adj.len();
         self.con = vec![0; n];
         self.pi = vec![0; n];
@@ -163,5 +161,6 @@ impl MinCostFlow {
         while self.dijkstra() {
             self.extend();
         }
+        return (self.mincost, self.maxflow);
     }
 }

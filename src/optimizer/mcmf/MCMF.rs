@@ -1,4 +1,4 @@
-use std::{cmp::min, collections::VecDeque};
+use std::{cmp::{Reverse, min}, collections::{BinaryHeap, VecDeque}};
 
 const INF: i64 = 1_i64 << 60;
 
@@ -14,6 +14,7 @@ pub struct MinCostFlow {
     pref: Vec<Option<usize>>,
     con: Vec<usize>,
     dist: Vec<i64>,
+    pi: Vec<i64>,
     s: usize,
     t: usize,
     pub maxflow: i64,
@@ -28,6 +29,7 @@ impl MinCostFlow {
             pref: Vec::new(),
             con: Vec::new(),
             dist: Vec::new(),
+            pi: Vec::new(),
             s: source,
             t: target,
             maxflow: 0,
@@ -82,6 +84,49 @@ impl MinCostFlow {
         self.pref[self.t].is_some()
     }
 
+    fn dijkstra(&mut self) -> bool {
+        let n = self.adj.len();
+        // reset predecessor, distance
+        self.pref = vec![None; n];
+        self.dist = vec![INF; n];
+
+        // min‐heap of (dist, node)
+        let mut heap = BinaryHeap::new();
+
+        // start at source
+        self.dist[self.s] = 0;
+        self.pref[self.s] = Some(self.s);
+        heap.push(Reverse((0, self.s)));
+
+        while let Some(Reverse((d, u))) = heap.pop() {
+            // stale entry?
+            if d != self.dist[u] {
+                continue;
+            }
+            // relax all residual edges out of u
+            for &id in &self.adj[u] {
+                let e = &self.edges[id];
+                if e.f > 0 {
+                    let v = e.to;
+                    let nd = d + (e.cost + self.pi[v] - self.pi[u]);
+                    if nd < self.dist[v] {
+                        self.dist[v] = nd;
+                        self.pref[v] = Some(u);
+                        self.con[v] = id;
+                        heap.push(Reverse((nd, v)));
+                    }
+                }
+            }
+        }
+
+        for i in 0..self.dist.len() {
+            self.dist[i] -= self.pi[i] - self.pi[self.s];
+        }
+
+        // did we reach t?
+        self.pref[self.t].is_some()
+    }
+
     fn extend(&mut self) {
         let mut w = INF;
         let mut u = self.t;
@@ -100,14 +145,20 @@ impl MinCostFlow {
             self.edges[edge_id ^ 1].f += w;
             u = self.pref[u].unwrap();
         }
+
+        for i in 0..self.dist.len() {
+            self.pi[i] = self.dist[i];
+        }
     }
 
     pub fn mincostflow(&mut self) -> (i64, i64) {
         let n = self.adj.len();
         self.con = vec![0; n];
+        self.pi = vec![0; n];
         self.maxflow = 0;
         self.mincost = 0;
-        while self.spfa() {
+        while self.dijkstra() {
+        // while self.spfa() {
             self.extend();
         }
         return (self.maxflow, self.mincost);

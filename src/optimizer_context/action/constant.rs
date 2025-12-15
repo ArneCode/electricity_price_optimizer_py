@@ -2,14 +2,30 @@ use std::rc::Rc;
 
 use crate::time::Time;
 
+/// A constant action that consumes a fixed amount of energy over a specified duration within given time bounds.
 pub struct ConstantAction {
+    /// The earliest time the action can start.
     pub start_from: Time,
+    /// The latest time the action must end before.
     pub end_before: Time,
+    /// The duration of the action.
     pub duration: Time,
+    /// The fixed consumption amount of the action for every timestep.
     pub consumption: i32,
     id: u32,
 }
 impl ConstantAction {
+    /// Creates a new ConstantAction.
+    /// # Arguments
+    /// * `start_from` - The earliest time the action can start.
+    /// * `end_before` - The latest time the action must end before.
+    /// * `duration` - The duration of the action.
+    /// * `consumption` - The fixed consumption amount of the action for every timestep.
+    /// * `id` - The unique identifier for the action.
+    /// # Panics
+    /// * Panics if the time bounds are invalid (i.e., if start_from + duration > end_before).
+    /// # Returns
+    /// * A new ConstantAction instance.
     pub fn new(
         start_from: Time,
         end_before: Time,
@@ -29,26 +45,42 @@ impl ConstantAction {
             id,
         }
     }
+    /// Returns the start_from time of the action.
     pub fn get_start_from(&self) -> Time {
         self.start_from
     }
+    /// Returns the end_before time of the action.
     pub fn get_end_before(&self) -> Time {
         self.end_before
     }
+    /// Returns the duration of the action.
     pub fn get_id(&self) -> u32 {
         self.id
     }
 
+    /// Returns the consumption of the action.
     pub fn get_consumption(&self) -> i32 {
         self.consumption
     }
 }
 
+/// A constant action where the start time has been fixed / assigned.
 pub struct AssignedConstantAction {
+    /// The constant action being assigned.
     action: Rc<ConstantAction>,
+    /// The assigned start time of the action.
     start_time: Time,
 }
 impl AssignedConstantAction {
+    /// Creates a new AssignedConstantAction.
+    ///
+    /// # Arguments
+    /// * `action` - The constant action to be assigned.
+    /// * `start_time` - The assigned start time of the action.
+    /// # Panics
+    /// * Panics if the start_time is out of bounds for the constant action.
+    /// # Returns
+    /// * A new AssignedConstantAction instance.
     pub fn new(action: Rc<ConstantAction>, start_time: Time) -> Self {
         assert!(
             start_time >= action.start_from && start_time + action.duration <= action.end_before,
@@ -57,18 +89,22 @@ impl AssignedConstantAction {
         Self { action, start_time }
     }
 
+    /// Returns the start time of the assigned action.
     pub fn get_start_time(&self) -> Time {
         self.start_time
     }
 
+    /// Returns a mutable reference to the start time of the assigned action.
     pub fn get_start_time_mut(&mut self) -> &mut Time {
         &mut self.start_time
     }
 
+    /// Returns a reference to the underlying constant action.
     pub fn get_action(&self) -> &Rc<ConstantAction> {
         &self.action
     }
 
+    /// Returns the end time of the assigned action.
     pub fn get_end_time(&self) -> Time {
         self.start_time + self.action.duration
     }

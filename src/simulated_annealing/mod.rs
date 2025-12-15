@@ -40,7 +40,7 @@ pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
                 change.undo(&mut state);
             }
         }
-        temperature *= 0.99; // Cool down
+        temperature *= 0.90; // Cool down
         println!("temperature: {temperature}, cost: {old_cost}");
     }
 
@@ -70,11 +70,11 @@ mod tests {
     fn test_simulated_annealing() {
         let mut electricity_price_data = [100; 1440];
         electricity_price_data[0] = 10;
-        let generated_electricity_data = [0; 1440];
-        let beyond_control_consumption_data = [0; 1440];
-        let batteries = vec![Battery::new(10, 0, 10, 7, 1.0, 1)];
-        let constant_actions = vec![Rc::new(ConstantAction::new(0, 10, 2, 10, 2))];
-        let variable_actions = vec![Rc::new(VariableAction::new(0, 10, 40, 10, 3))];
+        let generated_electricity_data = [4; 1440];
+        let beyond_control_consumption_data = [2; 1440];
+        let batteries = vec![Battery::new(10, 10, 10, 7, 1.0, 1)];
+        let constant_actions = vec![Rc::new(ConstantAction::new(0, 1000, 600, 10, 2))];
+        let variable_actions = vec![Rc::new(VariableAction::new(0, 1000, 40, 10, 3))];
 
         let context = OptimizerContext::new(
             Prognoses::new(electricity_price_data),

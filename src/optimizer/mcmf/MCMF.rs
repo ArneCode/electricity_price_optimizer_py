@@ -108,7 +108,7 @@ impl MinCostFlow {
                 let e = &self.edges[id];
                 if e.f > 0 {
                     let v = e.to;
-                    let nd = d + (e.cost + self.pi[v] - self.pi[u]);
+                    let nd = d + (e.cost - self.pi[v] + self.pi[u]);
                     if nd < self.dist[v] {
                         self.dist[v] = nd;
                         self.pref[v] = Some(u);
@@ -120,7 +120,7 @@ impl MinCostFlow {
         }
 
         for i in 0..self.dist.len() {
-            self.dist[i] -= self.pi[i] - self.pi[self.s];
+            self.dist[i] -= self.pi[self.s] - self.pi[i];
         }
 
         // did we reach t?

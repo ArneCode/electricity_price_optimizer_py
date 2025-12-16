@@ -6,6 +6,3 @@ pub mod helpers;
 pub mod MCMF;
 
 pub use MCMF::MinCostFlow;
-
-struct FlowConstructor {
-}

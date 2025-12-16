@@ -21,7 +21,7 @@ pub(crate) fn construct_action(
         let task_end = a.get_end().to_timestep();
 
         // Wire to Actions
-        for t in task_start..task_end {
+        for t in task_start..(task_end+1) {
             let action_incoming_num = variable_map.get_persistent_variable_index(id, t);
             let action_max_consumption = a.get_max_consumption() as i64;
 
@@ -34,7 +34,7 @@ pub(crate) fn construct_action(
         }
 
         // Action persistence
-        for t in 0..(STEPS_PER_DAY - 1) {
+        for t in task_start..task_end {
             let action_current_num = variable_map.get_persistent_variable_index(id, t);
             let action_next_num = variable_map.get_persistent_variable_index(id, t + 1);
 
@@ -46,7 +46,7 @@ pub(crate) fn construct_action(
             );
         }
 
-        let action_end_num = variable_map.get_persistent_variable_index(id, STEPS_PER_DAY - 1);
+        let action_end_num = variable_map.get_persistent_variable_index(id, task_end);
         mf.add_edge(
             action_end_num.unwrap() as usize,
             variable_maker::SINK as usize,

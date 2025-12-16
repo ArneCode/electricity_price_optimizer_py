@@ -39,7 +39,9 @@ impl VariableMaker {
 
         for var_action in context.get_variable_actions().iter() {
             let item_id = var_action.get_id() as ItemId;
-            for t in 0..MINUTES_PER_DAY {
+            let action_start = var_action.get_start().to_timestep();
+            let action_end = var_action.get_end().to_timestep();
+            for t in action_start..(action_end+1) {
                 persistent
                     .insert((item_id as ItemId, t as Timestamp), variable_count);
                 variable_count += 1;

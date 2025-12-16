@@ -4,7 +4,7 @@ use std::{
     io::{self, Read, Write},
 };
 
-const INF: i64 = 1_i64 << 58;
+const INF: i64 = 1_i64 << 60;
 
 #[derive(Clone)]
 struct Edge {

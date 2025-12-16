@@ -1,36 +1,40 @@
 use crate::{
     optimizer::{
-        mcmf::{
+        SmartHomeFlow, mcmf::{
             MinCostFlow,
-            helpers::{INF, add_variable_capacity},
-        },
-        variable_maker::{self, VariableMaker},
+            helpers::{INF},
+        }, variable_maker::{self, VariableMaker}
     },
-    optimizer_context::OptimizerContext,
+    optimizer_context::{OptimizerContext, battery::Battery},
     time::STEPS_PER_DAY,
 };
-
-pub(crate) fn construct_battery(
-    mf: &mut MinCostFlow,
-    variable_map: &VariableMaker,
-    context: &OptimizerContext,
-) {
-    for b in context.get_batteries() {
-        let id = b.get_id();
+impl SmartHomeFlow {
+    pub fn add_battery(&mut self, battery: Battery) {
+        let id = battery.get_id();
 
         // Initialize battery
-        let first_battery_incoming_num =
-            variable_map.get_persistent_variable_with_capacity_index(id, 0, true);
-        let initial_level = b.get_initial_level() as i64;
-        mf.add_edge(
+        let first_battery_incoming_num = self.persistent_variable_indices.get(&(id, 0)).r;
+        let initial_level = battery.get_initial_level() as i64;
+        let ind = self.flow.add_edge(
             variable_maker::SOURCE as usize,
-            first_battery_incoming_num.unwrap() as usize,
+            first_battery_incoming_num,
             initial_level,
             0,
         );
 
-        add_variable_capacity(id, mf, variable_map, b.get_capacity() as i64);
-
+        for t in 0..STEPS_PER_DAY {
+            
+            flow.add_edge(
+                variable_map
+                    .get_persistent_variable_with_capacity_index(item_id, t, true)
+                    .unwrap() as usize,
+                variable_map
+                    .get_persistent_variable_with_capacity_index(item_id, t, false)
+                    .unwrap() as usize,
+                cap,
+                0,
+            );
+        }
         // Wire to Batteries
         for t in 0..STEPS_PER_DAY {
             let battery_incoming_num =

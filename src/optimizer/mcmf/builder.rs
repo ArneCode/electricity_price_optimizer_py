@@ -12,8 +12,6 @@ use super::helpers::calculate_total_flow;
 pub fn contrusct_flow(context: &OptimizerContext) -> (MinCostFlow, VariableMaker) {
     let variable_map = VariableMaker::new(context);
 
-    let WIRE = variable_maker::WIRE;
-
     let mut mcmf = MinCostFlow::new(
         variable_map.get_variable_count() as usize,
         variable_maker::SOURCE as usize,

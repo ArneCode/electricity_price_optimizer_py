@@ -24,26 +24,6 @@ pub fn calculate_total_flow(context: &OptimizerContext) -> i64 {
     return total;
 }
 
-pub fn add_variable_capacity(
-    item_id: i32,
-    mf: &mut MinCostFlow,
-    variable_map: &VariableMaker,
-    cap: i64,
-) {
-    for t in 0..STEPS_PER_DAY {
-        mf.add_edge(
-            variable_map
-                .get_persistent_variable_with_capacity_index(item_id, t, true)
-                .unwrap() as usize,
-            variable_map
-                .get_persistent_variable_with_capacity_index(item_id, t, false)
-                .unwrap() as usize,
-            cap,
-            0,
-        );
-    }
-}
-
 pub(crate) fn calculate_mcmf_cost(context: &OptimizerContext) -> i64 {
     let (mut mcmf, _variable_map) = contrusct_flow(context);
     let (mincost, maxflow) = mcmf.mincostflow();

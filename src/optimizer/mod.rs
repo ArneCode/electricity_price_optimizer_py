@@ -1,5 +1,5 @@
 mod mcmf;
-mod variable_maker;
+use std::{collections::HashMap, hash::Hash};
 
 use std::time::Instant;
 
@@ -9,10 +9,16 @@ use crate::{
     optimizer::mcmf::MinCostFlow, optimizer_context::OptimizerContext, schedule::Schedule,
 };
 
+pub type PersistentVariableIndex = (i32, u32);
 struct SmartHomeFlow {
     flow: MinCostFlow,
-
+    
     schedule_relevant_edges: Vec<(usize, Box<dyn Fn(i32, &mut Schedule)>)>,
+
+
+    persistent_variable_indices: HashMap<PersistentVariableIndex, u32>,
+    NETWORK: usize,
+    GENERATOR: usize,
 }
 
 // impl SmartHomeFlow {

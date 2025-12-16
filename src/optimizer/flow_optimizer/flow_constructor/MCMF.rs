@@ -14,7 +14,6 @@ struct Edge {
 }
 
 pub struct MinCostFlow {
-    n: usize,
     edges: Vec<Edge>,
     adj: Vec<Vec<usize>>,
     pref: Vec<usize>,
@@ -28,28 +27,22 @@ pub struct MinCostFlow {
 }
 
 impl MinCostFlow {
-    pub fn new() -> Self {
+    pub fn new(n: usize, s: usize, t: usize) -> Self {
         Self {
-            n: 0,
-            edges: vec![],
-            adj: vec![],
-            pref: vec![],
-            con: vec![],
-            dist: vec![],
-            pi: vec![],
-            s: 0,
-            t: 0,
+            edges: Vec::new(),
+            adj: vec![Vec::new(); n],
+            pref: Vec::new(),
+            con: Vec::new(),
+            dist: Vec::new(),
+            pi: Vec::new(),
+            s: s,
+            t: t,
             maxflow: 0,
             mincost: 0,
         }
     }
 
-    pub fn new_node(&mut self) {
-        self.adj.push(vec![]);
-        self.n += 1;
-    }
-
-    pub fn add_edge(&mut self, u: usize, v: usize, cap: i64, cost: i64) -> usize {
+    pub fn add_edge(&mut self, u: usize, v: usize, cap: i64, cost: i64) {
         self.adj[u].push(self.edges.len());
         self.edges.push(Edge {
             to: v,
@@ -62,7 +55,6 @@ impl MinCostFlow {
             f: 0,
             cost: -cost,
         });
-        return self.edges.len() - 2;
     }
 
     fn spfa(&mut self) -> bool {
@@ -174,10 +166,6 @@ impl MinCostFlow {
         self.pi = vec![0; n];
         self.maxflow = 0;
         self.mincost = 0;
-        return self.update_flow();
-    }
-
-    pub fn update_flow(&mut self) -> (i64, i64) {
         while self.spfa() {
             self.extend();
         }

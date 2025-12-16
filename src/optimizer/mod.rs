@@ -5,10 +5,14 @@ use std::time::Instant;
 
 use mcmf::helpers::calculate_mcmf_cost;
 
-use crate::optimizer_context::OptimizerContext;
+use crate::{
+    optimizer::mcmf::MinCostFlow, optimizer_context::OptimizerContext, schedule::Schedule,
+};
 
 struct SmartHomeFlow {
-    /* ... */
+    flow: MinCostFlow,
+
+    schedule_relevant_edges: Vec<(usize, Box<dyn Fn(i32, &mut Schedule)>)>,
 }
 
 // impl SmartHomeFlow {
@@ -17,7 +21,7 @@ struct SmartHomeFlow {
 //     pub fn add_action(variable_action);
 //     pub fn add_constant_consumption(constant_action);
 //     pub fn remove_constant_consumption(constant_action);
-    
+
 //     pub fn calc_flow();
 //     pub fn get_cost() -> Option<Cost>;
 //     pub fn construct_schedule() -> Option<Schedule>;

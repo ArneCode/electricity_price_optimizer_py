@@ -46,7 +46,7 @@ pub fn add_variable_capacity(
 
 pub(crate) fn calculate_mcmf_cost(context: &OptimizerContext) -> i64 {
     let (mut mcmf, _variable_map) = contrusct_flow(context);
-    let (maxflow, mincost) = mcmf.mincostflow();
+    let (mincost, maxflow) = mcmf.mincostflow();
     if (maxflow as i64) < calculate_total_flow(context) {
         panic!("Could not satisfy all flows in MCMF construction");
     }

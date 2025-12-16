@@ -17,6 +17,11 @@ impl Change for RandomMoveChange {
         let constant_actions = state.get_constant_actions_mut();
         let action = &mut constant_actions[self.action_index];
         *action.get_start_time_mut() = self.new_time;
+
+        println!(
+            "Moved action {} from {} to {}",
+            self.action_index, self.old_time, self.new_time
+        );
     }
     fn undo(&self, state: &mut State) {
         let constant_actions = state.get_constant_actions_mut();

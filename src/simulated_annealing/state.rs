@@ -21,11 +21,12 @@ impl State {
             .get_constant_actions()
             .iter()
             .map(|action| {
-                let start_minutes = action.get_start_from().get_minutes();
-                let end_minutes =
-                    action.get_end_before().get_minutes() - action.duration.get_minutes();
-                let middle_minutes = (start_minutes + end_minutes) / 2;
-                AssignedConstantAction::new(action.clone(), Time::new(0, middle_minutes))
+                // let start_minutes = action.get_start_from().get_minutes();
+                // let end_minutes =
+                //     action.get_end_before().get_minutes() - action.duration.get_minutes();
+                // let middle_minutes = (start_minutes + end_minutes) / 2;
+                // AssignedConstantAction::new(action.clone(), Time::new(0, middle_minutes))
+                AssignedConstantAction::new(action.clone(), action.get_start_from())
             })
             .collect();
         Self {

@@ -3,7 +3,7 @@ use std::{
     ops::{Add, Sub},
 };
 
-const MINUTES_PER_TIMESTEP: u32 = 5;
+const MINUTES_PER_TIMESTEP: u32 = 1;
 
 const MINUTES_PER_DAY: u32 = 60 * 24;
 pub const STEPS_PER_DAY: u32 = MINUTES_PER_DAY / MINUTES_PER_TIMESTEP;

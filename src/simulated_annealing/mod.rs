@@ -106,9 +106,10 @@ pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
 #[cfg(test)]
 
 mod tests {
-    use std::rc::Rc;
+    use std::{rc::Rc, time::Instant};
 
     use rand::rand_core::le;
+    use statrs::generate;
 
     use crate::{
         optimizer_context::{
@@ -156,5 +157,46 @@ mod tests {
         let result = run_simulated_annealing(context);
         println!("result: {result}");
         // Add assertions to verify the results
+    }
+
+    #[test]
+    fn test_simulated_annealing2() {
+        let start = Instant::now();
+        let electricity_price: Prognoses<i32> =
+            Prognoses::from_closure(|t| (t as i32 - (STEPS_PER_DAY as i32 / 2)).abs() as i32 + 5);
+        // downward parabola with maximum in the middle of the day. Low prices at the edges of the day.
+        // let generated_electricity: Prognoses<i32> = Prognoses::from_closure(|t| {
+        //     ((STEPS_PER_DAY as i32 / 2).pow(2) + 5 - (t as i32 - (STEPS_PER_DAY as i32 / 2)).pow(2))
+        //         .min(300)
+        // });
+        let generated_electricity: Prognoses<i32> = Prognoses::from_closure(|_t| 0); // constant generation of 100 units
+
+        let beyond_control_consumption: Prognoses<i32> = Prognoses::from_closure(|_t| 0);
+
+        let batteries = vec![];
+
+        let constant_actions: Vec<Rc<ConstantAction>> = vec![Rc::new(ConstantAction::new(
+            Time::new(0, 0),
+            Time::new(23, 55),
+            Time::new(1, 0),
+            1000,
+            2,
+        ))];
+
+        let variable_actions: Vec<Rc<VariableAction>> = vec![];
+
+        let context = OptimizerContext::new(
+            electricity_price,
+            generated_electricity,
+            beyond_control_consumption,
+            batteries,
+            constant_actions,
+            variable_actions,
+        );
+
+        let result = run_simulated_annealing(context);
+        println!("result: {result}");
+        let duration = start.elapsed();
+        println!("Time elapsed in test() is: {:?}", duration);
     }
 }

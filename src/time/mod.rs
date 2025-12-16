@@ -13,7 +13,7 @@ pub const STEPS_PER_DAY: u32 = MINUTES_PER_DAY / MINUTES_PER_TIMESTEP;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Time {
     /// Total minutes since the current time.
-    minutes: u32,
+    pub(crate) minutes: u32,
 }
 
 impl Time {

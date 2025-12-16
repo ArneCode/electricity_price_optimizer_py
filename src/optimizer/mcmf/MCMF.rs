@@ -30,23 +30,32 @@ pub struct MinCostFlow {
 impl MinCostFlow {
     pub fn new() -> Self {
         Self {
-            n: 0,
+            n: 2,
             edges: vec![],
-            adj: vec![],
+            adj: vec![vec![]; 2],
             pref: vec![],
             con: vec![],
             dist: vec![],
             pi: vec![],
             s: 0,
-            t: 0,
+            t: 1,
             maxflow: 0,
             mincost: 0,
         }
     }
 
-    pub fn new_node(&mut self) {
+    pub fn get_source(&self) -> usize {
+        self.s
+    }
+
+    pub fn get_sink(&self) -> usize {
+        self.t
+    }
+
+    pub fn new_node(&mut self) -> usize {
         self.adj.push(vec![]);
         self.n += 1;
+        self.n - 1
     }
 
     pub fn add_edge(&mut self, u: usize, v: usize, cap: i64, cost: i64) -> usize {

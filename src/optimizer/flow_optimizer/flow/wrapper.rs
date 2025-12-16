@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::optimizer::flow_optimizer::flow::MinCostFlow;
+
 pub struct FlowWrapper {
     pub inner: MinCostFlow,
     node_map: HashMap<(usize, usize), usize>,
@@ -41,6 +43,10 @@ impl FlowWrapper {
         let u_id = u.into_node(self);
         let v_id = v.into_node(self);
         self.inner.add_edge(u_id, v_id, cap, cost)
+    }
+
+    pub fn add_node(&mut self) -> usize {
+        self.inner.new_node()
     }
 
     pub fn mincostflow(&mut self) -> (i64, i64) {

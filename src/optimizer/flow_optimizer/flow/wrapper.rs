@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 pub struct FlowWrapper {
     pub inner: MinCostFlow,
-    node_map: HashMap<(i32, i32), usize>,
+    node_map: HashMap<(usize, usize), usize>,
 }
 
 impl FlowWrapper {
@@ -21,7 +21,7 @@ impl FlowWrapper {
         self.inner.get_sink()
     }
 
-    pub fn node(&mut self, key: (i32, i32)) -> usize {
+    pub fn node(&mut self, key: (usize, usize)) -> usize {
         if let Some(&id) = self.node_map.get(&key) {
             id
         } else {
@@ -52,14 +52,29 @@ pub trait IntoNode {
     fn into_node(self, w: &mut FlowWrapper) -> usize;
 }
 
-impl IntoNode for i32 {
+impl IntoNode for usize {
     fn into_node(self, _w: &mut FlowWrapper) -> usize {
         self
     }
 }
 
-impl IntoNode for (i32, i32) {
+impl IntoNode for (usize, usize) {
     fn into_node(self, w: &mut FlowWrapper) -> usize {
         w.node(self)
     }
 }
+
+
+/*
+Usage:
+
+let mut flow = FlowWrapper::new();
+let s = flow.source();
+let t = flow.sink();
+
+flow.add_edge(s, (0, 0), 10, 0);
+flow.add_edge((0, 0), (1, 0), 5, 1);
+flow.add_edge((1, 0), t, 10, 0);
+
+let (cost, max_flow) = flow.mincostflow();
+*/

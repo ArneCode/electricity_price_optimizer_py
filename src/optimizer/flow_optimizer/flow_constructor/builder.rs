@@ -9,6 +9,15 @@ use super::battery::construct_battery;
 use super::consumption::add_beyond_control_consumption;
 use super::helpers::calculate_total_flow;
 
+impl SmartHomeFlow {
+    pub fn new(&mut self) {
+        self.SOURCE = self.flow.get_source();
+        self.SINK = self.flow.get_sink();
+        self.NETWORK = self.flow.new_node();
+        self.GENERATOR = self.flow_new_node();
+    }
+}
+
 pub fn contrusct_flow(context: &OptimizerContext) -> (MinCostFlow, VariableMaker) {
     let variable_map = VariableMaker::new(context);
 

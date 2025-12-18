@@ -1,8 +1,9 @@
-use std::rc::Rc;
+use std::{hash::Hash, ops::Deref, rc::Rc};
 
 use crate::time::Time;
 
 /// A constant action that consumes a fixed amount of energy over a specified duration within given time bounds.
+#[derive(Clone)]
 pub struct ConstantAction {
     /// The earliest time the action can start.
     pub start_from: Time,
@@ -65,6 +66,7 @@ impl ConstantAction {
 }
 
 /// A constant action where the start time has been fixed / assigned.
+#[derive(Clone)]
 pub struct AssignedConstantAction {
     /// The constant action being assigned.
     action: Rc<ConstantAction>,
@@ -109,3 +111,27 @@ impl AssignedConstantAction {
         self.start_time + self.action.duration
     }
 }
+
+impl Deref for AssignedConstantAction {
+    type Target = ConstantAction;
+
+    fn deref(&self) -> &Self::Target {
+        &self.action
+    }
+}
+
+impl Hash for AssignedConstantAction {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.action.id.hash(state);
+        self.start_time.to_timestep().hash(state);
+    }
+}
+
+impl PartialEq for AssignedConstantAction {
+    fn eq(&self, other: &Self) -> bool {
+        self.action.id == other.action.id
+            && self.start_time.to_timestep() == other.start_time.to_timestep()
+    }
+}
+
+impl Eq for AssignedConstantAction {}

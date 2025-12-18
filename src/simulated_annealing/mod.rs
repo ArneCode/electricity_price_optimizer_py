@@ -1,7 +1,6 @@
 use rand::Rng;
 
 use crate::{
-    optimizer::get_cost,
     optimizer_context::OptimizerContext,
     simulated_annealing::{
         change::{Change, multi_change::MultiChange},

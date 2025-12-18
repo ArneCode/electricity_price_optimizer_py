@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
-use crate::optimizer::flow_optimizer::flow::MinCostFlow;
+use crate::{optimizer::flow_optimizer::flow::MinCostFlow, time::Time};
 
-pub struct FlowWrapper {
+
+#[derive(Clone)]
+pub struct FlowWrapper { 
     pub inner: MinCostFlow,
     node_map: HashMap<(usize, usize), usize>,
 }
@@ -45,7 +47,7 @@ impl FlowWrapper {
         self.inner.add_edge(u_id, v_id, cap, cost)
     }
 
-    pub fn add_node(&mut self) -> usize {
+    pub fn new_node(&mut self) -> usize {
         self.inner.new_node()
     }
 
@@ -54,23 +56,39 @@ impl FlowWrapper {
     }
 }
 
+impl Default for FlowWrapper {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 pub trait IntoNode {
     fn into_node(self, w: &mut FlowWrapper) -> usize;
 }
 
-impl IntoNode for usize {
-    fn into_node(self, _w: &mut FlowWrapper) -> usize {
-        self
-    }
+
+pub enum FlowNode {
+    Wire(Time), // timestep
+    Action(usize), // action id
+    Battery(usize, Time), // battery id, timestep
+    Source,
+    Sink,
+    Network,
+    Generator,
 }
 
-impl IntoNode for (usize, usize) {
+impl IntoNode for FlowNode {
     fn into_node(self, w: &mut FlowWrapper) -> usize {
-        w.node(self)
+        match self {
+            FlowNode::Wire(t) => w.node((0, t.to_timestep() as usize)),
+            FlowNode::Action(id) => w.node((id, 0)),
+            FlowNode::Battery(id, t) => w.node((id + 5, t.to_timestep() as usize)),
+            FlowNode::Source => w.source(),
+            FlowNode::Sink => w.sink(),
+            FlowNode::Network => w.node((1, 0)),
+            FlowNode::Generator => w.node((2, 0)),
+        }
     }
 }
-
-
 /*
 Usage:
 
@@ -83,4 +101,7 @@ flow.add_edge((0, 0), (1, 0), 5, 1);
 flow.add_edge((1, 0), t, 10, 0);
 
 let (cost, max_flow) = flow.mincostflow();
+
+flow.push_state();
+flow.pop_state();
 */

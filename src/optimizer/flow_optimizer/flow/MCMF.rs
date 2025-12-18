@@ -12,7 +12,7 @@ struct Edge {
     f: i64,
     cost: i64,
 }
-
+#[derive(Clone)]
 pub struct MinCostFlow {
     n: usize,
     edges: Vec<Edge>,

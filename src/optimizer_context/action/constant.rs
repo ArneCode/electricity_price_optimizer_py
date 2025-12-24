@@ -3,7 +3,7 @@ use std::{hash::Hash, ops::Deref, rc::Rc};
 use crate::time::Time;
 
 /// A constant action that consumes a fixed amount of energy over a specified duration within given time bounds.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ConstantAction {
     /// The earliest time the action can start.
     pub start_from: Time,
@@ -63,10 +63,14 @@ impl ConstantAction {
     pub fn get_consumption(&self) -> i32 {
         self.consumption
     }
+
+    pub fn with_start_time(self: Rc<Self>, start_time: Time) -> AssignedConstantAction {
+        AssignedConstantAction::new(self, start_time)
+    }
 }
 
 /// A constant action where the start time has been fixed / assigned.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AssignedConstantAction {
     /// The constant action being assigned.
     action: Rc<ConstantAction>,

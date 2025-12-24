@@ -71,14 +71,16 @@ pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
 
     let mut rng = rand::rng();
 
-    let mut old_cost = get_cost(&state.to_fixed_context());
+    state.run_local_search();
+    let mut old_cost = state.get_cost();
     while temperature > 0.1 {
         // Determine random_move_sigma based on temperature
         let random_move_sigma = 30.0 * temperature.sqrt();
         let change = MultiChange::new_random(&mut rng, &state, random_move_sigma, 2);
         change.apply(&mut state);
         // Evaluate the new state and decide whether to accept or reject the change
-        let new_cost = get_cost(&state.to_fixed_context());
+        state.run_local_search();
+        let new_cost = state.get_cost();
         let cost_diff = new_cost - old_cost;
         if cost_diff < 0 {
             // Accept the change
@@ -137,13 +139,13 @@ mod tests {
             300,
             2,
         ))];
-        let variable_actions = vec![Rc::new(VariableAction::new(
+        let variable_actions = Rc::new(vec![VariableAction::new(
             Time::new(1, 15),
             Time::new(10, 0),
             300,
             100,
             3,
-        ))];
+        )]);
 
         let context = OptimizerContext::new(
             Prognoses::new(electricity_price_data),
@@ -182,7 +184,7 @@ mod tests {
             2,
         ))];
 
-        let variable_actions: Vec<Rc<VariableAction>> = vec![];
+        let variable_actions: Rc<Vec<VariableAction>> = Rc::new(vec![]);
 
         let context = OptimizerContext::new(
             electricity_price,

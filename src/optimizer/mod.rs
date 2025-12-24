@@ -10,8 +10,8 @@ use crate::optimizer_context::action::constant::{self, AssignedConstantAction, C
 use crate::optimizer_context::action::variable::VariableAction;
 use crate::optimizer_context::battery::Battery;
 use crate::optimizer_context::prognoses::Prognoses;
-use crate::time::{STEPS_PER_DAY, Time};
 use crate::schedule::Schedule;
+use crate::time::{STEPS_PER_DAY, Time};
 
 mod flow_optimizer;
 pub struct SmartHomeFlowBuilder {
@@ -32,23 +32,36 @@ impl SmartHomeFlowBuilder {
             // Edge from GENERATOR to wire for generation
             let gen_amount = *generate_prog.get(Time::from_timestep(i)).unwrap_or(&0) as i64;
             if gen_amount > 0 {
-                flow.add_edge(FlowNode::Generator, FlowNode::Wire(Time::from_timestep(i)), gen_amount, 0);
+                flow.add_edge(
+                    FlowNode::Generator,
+                    FlowNode::Wire(Time::from_timestep(i)),
+                    gen_amount,
+                    0,
+                );
             }
 
             // Edge from NETWORK to wire with cost based on price
             let price = *price_prog.get(Time::from_timestep(i)).unwrap_or(&0) as i64;
-            flow.add_edge(FlowNode::Network, FlowNode::Wire(Time::from_timestep(i)), i64::MAX, price);
+            flow.add_edge(
+                FlowNode::Network,
+                FlowNode::Wire(Time::from_timestep(i)),
+                i64::MAX,
+                price,
+            );
 
             // Edge from wire to SINK for consumption
             let cons_amount = *consume_prog.get(Time::from_timestep(i)).unwrap_or(&0) as i64;
             if cons_amount > 0 {
-                flow.add_edge(FlowNode::Wire(Time::from_timestep(i)), FlowNode::Sink, cons_amount, 0);
+                flow.add_edge(
+                    FlowNode::Wire(Time::from_timestep(i)),
+                    FlowNode::Sink,
+                    cons_amount,
+                    0,
+                );
             }
         }
 
-        Self {
-            flow,
-        }
+        Self { flow }
     }
 
     pub fn add_battery(mut self, battery: &Battery) -> Self {
@@ -63,7 +76,6 @@ impl SmartHomeFlowBuilder {
             0,
         );
 
-        
         // Wire to Batteries
         for t in 0..STEPS_PER_DAY {
             // Wire to battery
@@ -101,7 +113,7 @@ impl SmartHomeFlowBuilder {
         }
         self
     }
-    pub fn add_action(mut self, variable_action: &VariableAction) -> Self{
+    pub fn add_action(mut self, variable_action: &VariableAction) -> Self {
         let start = variable_action.get_start().to_timestep() as usize;
         let end = variable_action.get_end().to_timestep() as usize;
         for t in start..end {
@@ -133,30 +145,26 @@ impl SmartHomeFlowBuilder {
     }
     pub fn build(mut self) -> SmartHomeFlow {
         self.flow.mincostflow();
-        SmartHomeFlow::new(
-            self.flow
-        )
+        SmartHomeFlow::new(self.flow)
     }
 }
-pub(crate) struct SmartHomeFlow {
+pub struct SmartHomeFlow {
     flow: StackProxy<FlowWrapper>,
 
-    constant_actions: HashSet<AssignedConstantAction>,
+    constant_actions: HashMap<u32, AssignedConstantAction>,
 
     calc_result: Option<i64>,
-    
+
     schedule_relevant_edges: Vec<(usize, Box<dyn Fn(i32, &mut Schedule)>)>,
 }
 
 // WARNING: wire has ID = 0, make sure no node uses this ID!
 impl SmartHomeFlow {
-        pub fn new(
-        flow: FlowWrapper
-    ) -> Self {
+    pub fn new(flow: FlowWrapper) -> Self {
         let flow: StackProxy<FlowWrapper> = StackProxy::new(flow);
         SmartHomeFlow {
             flow,
-            constant_actions: HashSet::new(),
+            constant_actions: HashMap::new(),
             calc_result: None,
             schedule_relevant_edges: Vec::new(),
         }
@@ -164,18 +172,25 @@ impl SmartHomeFlow {
 
     // Both functions work in progress:
     pub fn add_constant_consumption(&mut self, constant_action: AssignedConstantAction) {
-        self.constant_actions.insert(constant_action);
+        self.constant_actions
+            .insert(constant_action.get_id(), constant_action);
         self.calc_result = None;
     }
-    pub fn remove_constant_consumption(&mut self, constant_action: AssignedConstantAction) {
-        self.constant_actions.remove(&constant_action);
+
+    pub fn remove_constant_consumption(&mut self, id: u32) -> Option<AssignedConstantAction> {
         self.calc_result = None;
+        self.constant_actions.remove(&id)
     }
 
     pub fn calc_flow(&mut self) {
         self.flow.push();
 
-        for constant_action in &self.constant_actions {
+        println!(
+            "Calculating flow with {} constant actions...",
+            self.constant_actions.len()
+        );
+        println!("Actions: {:?}", self.constant_actions);
+        for (_, constant_action) in &self.constant_actions {
             let start = constant_action.get_start_from().to_timestep() as usize;
             let end = constant_action.get_end_before().to_timestep() as usize;
             for t in start..end {

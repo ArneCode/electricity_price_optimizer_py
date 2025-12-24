@@ -17,8 +17,6 @@ pub struct State {
     constant_action_ids: Vec<u32>,
 
     smart_home_flow: SmartHomeFlow,
-
-    is_valid: bool,
 }
 
 impl State {
@@ -57,17 +55,14 @@ impl State {
             constant_actions,
             constant_action_ids,
             smart_home_flow,
-            is_valid: false,
         }
     }
     pub fn add_constant_action(&mut self, action: AssignedConstantAction) {
         self.smart_home_flow
             .add_constant_consumption(action.clone());
         self.constant_actions.insert(action.get_id(), action);
-        self.is_valid = false;
     }
     pub fn remove_constant_action(&mut self, action_id: u32) -> Option<AssignedConstantAction> {
-        self.is_valid = false;
         self.constant_actions.remove(&action_id);
         self.smart_home_flow.remove_constant_consumption(action_id)
     }
@@ -80,18 +75,8 @@ impl State {
         &self.constant_action_ids
     }
 
-    pub fn run_local_search(&mut self) {
-        self.smart_home_flow.calc_flow();
-        self.is_valid = true;
-    }
-
-    pub fn get_cost(&self) -> i64 {
-        assert!(self.is_valid);
-        self.smart_home_flow.get_cost().unwrap()
-    }
-
-    pub fn is_valid(&self) -> bool {
-        self.is_valid
+    pub fn get_cost(&mut self) -> i64 {
+        self.smart_home_flow.get_cost()
     }
     // pub fn to_fixed_context(&self) -> OptimizerContext {
     //     let mut new_context = self.context.clone();

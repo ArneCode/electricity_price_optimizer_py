@@ -71,7 +71,6 @@ pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
 
     let mut rng = rand::rng();
 
-    state.run_local_search();
     let mut old_cost = state.get_cost();
     while temperature > 0.1 {
         // Determine random_move_sigma based on temperature
@@ -79,7 +78,6 @@ pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
         let change = MultiChange::new_random(&mut rng, &state, random_move_sigma, 2);
         change.apply(&mut state);
         // Evaluate the new state and decide whether to accept or reject the change
-        state.run_local_search();
         let new_cost = state.get_cost();
         let cost_diff = new_cost - old_cost;
         if cost_diff < 0 {

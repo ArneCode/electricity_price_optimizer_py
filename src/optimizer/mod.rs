@@ -182,7 +182,7 @@ impl SmartHomeFlow {
         self.constant_actions.remove(&id)
     }
 
-    pub fn calc_flow(&mut self) {
+    fn calc_flow(&mut self) {
         self.flow.push();
 
         println!(
@@ -209,8 +209,11 @@ impl SmartHomeFlow {
         println!("Total flow: {}, Total cost: {}", flow_value, flow_cost);
         self.flow.pop();
     }
-    pub fn get_cost(&self) -> Option<i64> {
-        self.calc_result
+    pub fn get_cost(&mut self) -> i64 {
+        if self.calc_result.is_none() {
+            self.calc_flow();
+        }
+        self.calc_result.unwrap()
     }
     // pub fn get_cost(&mut self) -> Option<Cost> {}
     // pub fn construct_schedule() -> Option<Schedule> {}

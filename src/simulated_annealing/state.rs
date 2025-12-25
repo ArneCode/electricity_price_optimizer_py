@@ -81,7 +81,14 @@ impl State {
     }
 
     pub fn get_schedule(&mut self) -> Schedule {
-        self.smart_home_flow.get_schedule()
+        let mut schedule = self.smart_home_flow.get_schedule();
+        schedule.set_constant_actions(
+            self.constant_actions
+                .values()
+                .cloned()
+                .collect::<Vec<AssignedConstantAction>>(),
+        );
+        schedule
     }
     // pub fn to_fixed_context(&self) -> OptimizerContext {
     //     let mut new_context = self.context.clone();

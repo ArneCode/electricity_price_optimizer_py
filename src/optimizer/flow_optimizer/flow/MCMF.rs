@@ -197,6 +197,36 @@ impl MinCostFlow {
         true
     }
 
+    fn spfa(&mut self) -> bool {
+        let n = self.adj.len();
+        self.pref = vec![usize::MAX; n];
+        self.dist = vec![INF; n];
+        let mut inq = vec![false; n];
+        let mut q = VecDeque::new();
+
+        self.dist[self.s] = 0;
+        self.pref[self.s] = self.s;
+        q.push_back(self.s);
+        inq[self.s] = true;
+
+        while let Some(u) = q.pop_front() {
+            inq[u] = false;
+            for &id in &self.adj[u] {
+                let e = &self.edges[id];
+                if e.f > 0 && self.dist[e.to] > self.dist[u] + e.cost && e.cost >= 0 {
+                    self.dist[e.to] = self.dist[u] + e.cost;
+                    self.pref[e.to] = u;
+                    self.con[e.to] = id;
+                    if !inq[e.to] {
+                        inq[e.to] = true;
+                        q.push_back(e.to);
+                    }
+                }
+            }
+        }
+        self.pref[self.t] != usize::MAX
+    }
+
     fn extend(&mut self) {
         let mut w = INF;
         let mut u = self.t;
@@ -238,18 +268,21 @@ impl MinCostFlow {
         if self.con.len() < n { self.con.resize(n, 0); }
         if self.pi.len() < n { self.pi.resize(n, 0); }
 
-        // Phase 1: SPFA with cycle cancellation to handle negative edges
-        // and establish valid potentials
-        while self.spfa_with_cycle_cancel() {
-            self.extend();
-            // break; // One SPFA iteration is usually enough
-        }
+        // // Phase 1: SPFA with cycle cancellation to handle negative edges
+        // // and establish valid potentials
+        // while self.spfa_with_cycle_cancel() {
+        //     self.extend();
+        //     break; // One SPFA iteration is usually enough
+        // }
 
-        // Phase 2: Dijkstra for remaining augmentations (fast!)
-        while self.dijkstra() {
+        // // Phase 2: Dijkstra for remaining augmentations (fast!)
+        // while self.dijkstra() {
+        //     self.extend();
+        // }
+
+        while self.spfa() {
             self.extend();
         }
-
         (self.mincost, self.maxflow)
     }
 

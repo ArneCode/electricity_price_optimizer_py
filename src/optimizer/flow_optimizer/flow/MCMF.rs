@@ -73,12 +73,12 @@ impl MinCostFlow {
         });
         return self.edges.len() - 2;
     }
-
-    fn spfa(&mut self) -> bool {
+    fn spfa_with_cycle_cancel(&mut self) -> bool {
         let n = self.adj.len();
         self.pref = vec![usize::MAX; n];
         self.dist = vec![INF; n];
         let mut inq = vec![false; n];
+        let mut cnt = vec![0usize; n];
         let mut q = VecDeque::new();
 
         self.dist[self.s] = 0;
@@ -94,6 +94,15 @@ impl MinCostFlow {
                     self.dist[e.to] = self.dist[u] + e.cost;
                     self.pref[e.to] = u;
                     self.con[e.to] = id;
+                    cnt[e.to] += 1;
+
+                    // Negative cycle detected - cancel it!
+                    if cnt[e.to] >= n {
+                        self.cancel_negative_cycle(e.to);
+                        // Reset and restart SPFA
+                        return self.spfa_with_cycle_cancel();
+                    }
+
                     if !inq[e.to] {
                         inq[e.to] = true;
                         q.push_back(e.to);
@@ -102,6 +111,44 @@ impl MinCostFlow {
             }
         }
         self.pref[self.t] != usize::MAX
+    }
+
+    fn cancel_negative_cycle(&mut self, start: usize) {
+        // Find the cycle by walking back through predecessors
+        let n = self.adj.len();
+        let mut visited = vec![false; n];
+        let mut u = start;
+        
+        // Get to a node definitely in the cycle
+        for _ in 0..n {
+            u = self.pref[u];
+        }
+        
+        // Find min capacity around the cycle and collect edges
+        let cycle_start = u;
+        let mut min_cap = INF;
+        let mut cycle_edges = vec![];
+        
+        loop {
+            let id = self.con[u];
+            cycle_edges.push(id);
+            min_cap = min_cap.min(self.edges[id].f);
+            u = self.pref[u];
+            if u == cycle_start {
+                break;
+            }
+        }
+        
+        // Push flow around cycle (reduces cost, doesn't change max flow)
+        let mut cycle_cost = 0i64;
+        for &id in &cycle_edges {
+            cycle_cost += self.edges[id].cost;
+            self.edges[id].f -= min_cap;
+            self.edges[id ^ 1].f += min_cap;
+        }
+        
+        // Update mincost (cycle_cost is negative, so this reduces total cost)
+        self.mincost += cycle_cost * min_cap;
     }
 
     fn dijkstra(&mut self) -> bool {
@@ -187,9 +234,24 @@ impl MinCostFlow {
     }
 
     pub fn update_flow(&mut self) -> (i64, i64) {
-        while self.spfa() {
+        let n = self.adj.len();
+        if self.con.len() < n { self.con.resize(n, 0); }
+        if self.pi.len() < n { self.pi.resize(n, 0); }
+
+        // Phase 1: SPFA with cycle cancellation to handle negative edges
+        // and establish valid potentials
+        while self.spfa_with_cycle_cancel() {
+            self.extend();
+            // break; // One SPFA iteration is usually enough
+        }
+
+        // Phase 2: Dijkstra for remaining augmentations (fast!)
+        while self.dijkstra() {
             self.extend();
         }
-        return (self.mincost, self.maxflow);
+
+        (self.mincost, self.maxflow)
     }
+
+
 }

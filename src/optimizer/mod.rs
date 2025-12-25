@@ -210,6 +210,7 @@ impl SmartHomeFlow {
         let duration = start.elapsed();
         println!("Flow calculation took: {:?}", duration);
     }
+    
     pub fn get_cost(&mut self) -> i64 {
         if self.calc_result.is_none() {
             self.calc_flow();

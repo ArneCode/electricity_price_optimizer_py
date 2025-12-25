@@ -8,15 +8,17 @@ use crate::{optimizer::flow_optimizer::flow::MinCostFlow, time::Time};
 #[derive(Clone)]
 pub struct FlowWrapper {
     pub inner: MinCostFlow,
-    node_map: HashMap<(usize, usize), usize>,
+    node_map: HashMap<FlowNode, usize>,
 }
 
 impl FlowWrapper {
     pub fn new() -> Self {
-        Self {
-            inner: MinCostFlow::new(),
-            node_map: HashMap::new(),
-        }
+        let inner = MinCostFlow::new();
+        let node_map = HashMap::from([
+            (FlowNode::Source, inner.get_source()),
+            (FlowNode::Sink, inner.get_sink()),
+        ]);
+        Self { inner, node_map }
     }
 
     pub fn source(&self) -> usize {
@@ -27,7 +29,7 @@ impl FlowWrapper {
         self.inner.get_sink()
     }
 
-    pub fn node(&mut self, key: (usize, usize)) -> usize {
+    fn node(&mut self, key: FlowNode) -> usize {
         if let Some(&id) = self.node_map.get(&key) {
             id
         } else {
@@ -37,9 +39,9 @@ impl FlowWrapper {
         }
     }
 
-    pub fn add_edge<U: IntoNode, V: IntoNode>(&mut self, u: U, v: V, cap: i64, cost: i64) -> usize {
-        let u_id = u.into_node(self);
-        let v_id = v.into_node(self);
+    pub fn add_edge(&mut self, u: FlowNode, v: FlowNode, cap: i64, cost: i64) -> usize {
+        let u_id = self.node(u);
+        let v_id = self.node(v);
         self.inner.add_edge(u_id, v_id, cap, cost)
     }
 
@@ -71,10 +73,8 @@ impl DerefMut for FlowWrapper {
         &mut self.inner
     }
 }
-pub trait IntoNode {
-    fn into_node(self, w: &mut FlowWrapper) -> usize;
-}
-#[derive(Debug)]
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum FlowNode {
     Wire(Time),           // timestep
     Action(usize),        // action id
@@ -84,35 +84,3 @@ pub enum FlowNode {
     Network,
     Generator,
 }
-
-impl IntoNode for FlowNode {
-    fn into_node(self, w: &mut FlowWrapper) -> usize {
-        let res = match self {
-            FlowNode::Wire(t) => w.node((0, 2 + t.to_timestep() as usize)),
-            FlowNode::Action(id) => w.node((id, 0)),
-            FlowNode::Battery(id, t) => w.node((id + 5, 2 + t.to_timestep() as usize)),
-            FlowNode::Source => w.source(),
-            FlowNode::Sink => w.sink(),
-            FlowNode::Network => w.node((1, 1)),
-            FlowNode::Generator => w.node((2, 1)),
-        };
-        // println!("Converted {:?} to node {}", self, res);
-        res
-    }
-}
-/*
-Usage:
-
-let mut flow = FlowWrapper::new();
-let s = flow.source();
-let t = flow.sink();
-
-flow.add_edge(s, (0, 0), 10, 0);
-flow.add_edge((0, 0), (1, 0), 5, 1);
-flow.add_edge((1, 0), t, 10, 0);
-
-let (cost, max_flow) = flow.mincostflow();
-
-flow.push_state();
-flow.pop_state();
-*/

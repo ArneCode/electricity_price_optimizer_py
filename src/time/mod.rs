@@ -10,7 +10,7 @@ pub const STEPS_PER_DAY: u32 = MINUTES_PER_DAY / MINUTES_PER_TIMESTEP;
 
 /// Represents a specific time of day in minutes.
 /// Provides methods for conversion between time and timesteps.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub struct Time {
     /// Total minutes since the current time.
     pub(crate) minutes: u32,

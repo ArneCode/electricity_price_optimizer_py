@@ -38,8 +38,8 @@ impl State {
             .collect();
         let mut smart_home_flow = SmartHomeFlowBuilder::new(
             context.get_generated_electricity(),
-            context.get_beyond_control_consumption(),
             context.get_electricity_price(),
+            context.get_beyond_control_consumption(),
         )
         .add_batteries(context.get_batteries())
         .add_actions(context.get_variable_actions())

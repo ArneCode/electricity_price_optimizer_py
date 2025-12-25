@@ -1,10 +1,12 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    ops::{Deref, DerefMut},
+};
 
 use crate::{optimizer::flow_optimizer::flow::MinCostFlow, time::Time};
 
-
 #[derive(Clone)]
-pub struct FlowWrapper { 
+pub struct FlowWrapper {
     pub inner: MinCostFlow,
     node_map: HashMap<(usize, usize), usize>,
 }
@@ -35,13 +37,7 @@ impl FlowWrapper {
         }
     }
 
-    pub fn add_edge<U: IntoNode, V: IntoNode>(
-        &mut self,
-        u: U,
-        v: V,
-        cap: i64,
-        cost: i64,
-    ) -> usize {
+    pub fn add_edge<U: IntoNode, V: IntoNode>(&mut self, u: U, v: V, cap: i64, cost: i64) -> usize {
         let u_id = u.into_node(self);
         let v_id = v.into_node(self);
         self.inner.add_edge(u_id, v_id, cap, cost)
@@ -61,14 +57,27 @@ impl Default for FlowWrapper {
         Self::new()
     }
 }
+
+impl Deref for FlowWrapper {
+    type Target = MinCostFlow;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl DerefMut for FlowWrapper {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
 pub trait IntoNode {
     fn into_node(self, w: &mut FlowWrapper) -> usize;
 }
-
-
+#[derive(Debug)]
 pub enum FlowNode {
-    Wire(Time), // timestep
-    Action(usize), // action id
+    Wire(Time),           // timestep
+    Action(usize),        // action id
     Battery(usize, Time), // battery id, timestep
     Source,
     Sink,
@@ -78,15 +87,17 @@ pub enum FlowNode {
 
 impl IntoNode for FlowNode {
     fn into_node(self, w: &mut FlowWrapper) -> usize {
-        match self {
-            FlowNode::Wire(t) => w.node((0, t.to_timestep() as usize)),
+        let res = match self {
+            FlowNode::Wire(t) => w.node((0, 2 + t.to_timestep() as usize)),
             FlowNode::Action(id) => w.node((id, 0)),
-            FlowNode::Battery(id, t) => w.node((id + 5, t.to_timestep() as usize)),
+            FlowNode::Battery(id, t) => w.node((id + 5, 2 + t.to_timestep() as usize)),
             FlowNode::Source => w.source(),
             FlowNode::Sink => w.sink(),
-            FlowNode::Network => w.node((1, 0)),
-            FlowNode::Generator => w.node((2, 0)),
-        }
+            FlowNode::Network => w.node((1, 1)),
+            FlowNode::Generator => w.node((2, 1)),
+        };
+        // println!("Converted {:?} to node {}", self, res);
+        res
     }
 }
 /*

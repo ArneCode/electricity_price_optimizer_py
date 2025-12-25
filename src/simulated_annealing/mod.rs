@@ -170,9 +170,9 @@ mod tests {
         // });
         let generated_electricity: Prognoses<i32> = Prognoses::from_closure(|_t| 0); // constant generation of 100 units
 
-        let beyond_control_consumption: Prognoses<i32> = Prognoses::from_closure(|_t| 0);
+        let beyond_control_consumption: Prognoses<i32> = Prognoses::from_closure(|_t| 5);
 
-        let batteries = vec![];
+        let batteries = vec![Battery::new(1000, 50, 50, 7, 1.0, 1)];
 
         let constant_actions: Vec<Rc<ConstantAction>> = vec![Rc::new(ConstantAction::new(
             Time::new(0, 0),
@@ -182,7 +182,13 @@ mod tests {
             2,
         ))];
 
-        let variable_actions: Rc<Vec<VariableAction>> = Rc::new(vec![]);
+        let variable_actions: Rc<Vec<VariableAction>> = Rc::new(vec![VariableAction::new(
+            Time::new(6, 0),
+            Time::new(18, 0),
+            500,
+            100,
+            3,
+        )]);
 
         let context = OptimizerContext::new(
             electricity_price,

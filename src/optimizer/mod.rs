@@ -183,31 +183,32 @@ impl SmartHomeFlow {
     }
 
     fn calc_flow(&mut self) {
+        let start = Instant::now();
         self.flow.push();
 
-        println!(
-            "Calculating flow with {} constant actions...",
-            self.constant_actions.len()
-        );
-        println!("Actions: {:?}", self.constant_actions);
+        let inner_start = Instant::now();
         for (_, constant_action) in &self.constant_actions {
-            let start = constant_action.get_start_from().to_timestep() as usize;
-            let end = constant_action.get_end_before().to_timestep() as usize;
+            let start = constant_action.get_start_time().to_timestep() as usize;
+            let end = constant_action.get_end_time().to_timestep() as usize;
             for t in start..end {
                 // Wire to sink
                 self.flow.add_edge(
                     FlowNode::Wire(Time::from_timestep(t as u32)),
                     FlowNode::Sink,
                     constant_action.get_consumption() as i64,
-                    0,
+                    1,
                 );
             }
         }
-
-        let (flow_cost, flow_value) = self.flow.mincostflow();
+        println!("start flow");
+        let (flow_cost, flow_value) = self.flow.update_flow();
         self.calc_result = Some(flow_cost);
         println!("Total flow: {}, Total cost: {}", flow_value, flow_cost);
+        let inner_duration = inner_start.elapsed();
+        println!("Flow setup took: {:?}", inner_duration);
         self.flow.pop();
+        let duration = start.elapsed();
+        println!("Flow calculation took: {:?}", duration);
     }
     pub fn get_cost(&mut self) -> i64 {
         if self.calc_result.is_none() {

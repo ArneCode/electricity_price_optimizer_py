@@ -37,12 +37,12 @@ pub struct OptimizerContext {
     beyond_control_consumption: Prognoses<i32>,
 
     /// Batteries available in the system
-    batteries: Rc<Vec<Battery>>,
+    batteries: Vec<Rc<Battery>>,
 
     /// Constant actions that can be scheduled
     constant_actions: Vec<Rc<ConstantAction>>,
     /// Variable actions that can be scheduled
-    variable_actions: Rc<Vec<VariableAction>>,
+    variable_actions: Vec<Rc<VariableAction>>,
 }
 impl OptimizerContext {
     ///
@@ -62,15 +62,15 @@ impl OptimizerContext {
         electricity_price: Prognoses<i32>,
         generated_electricity: Prognoses<i32>,
         beyond_control_consumption: Prognoses<i32>,
-        batteries: Vec<Battery>,
+        batteries: Vec<Rc<Battery>>,
         constant_actions: Vec<Rc<ConstantAction>>,
-        variable_actions: Rc<Vec<VariableAction>>,
+        variable_actions: Vec<Rc<VariableAction>>,
     ) -> Self {
         Self {
             electricity_price: Rc::new(electricity_price),
             generated_electricity: Rc::new(generated_electricity),
             beyond_control_consumption,
-            batteries: Rc::new(batteries),
+            batteries: batteries,
             constant_actions,
             variable_actions,
         }
@@ -81,11 +81,11 @@ impl OptimizerContext {
         &self.constant_actions
     }
     /// Returns a reference to the list of variable actions.
-    pub fn get_variable_actions(&self) -> &Rc<Vec<VariableAction>> {
+    pub fn get_variable_actions(&self) -> &Vec<Rc<VariableAction>> {
         &self.variable_actions
     }
     /// Returns a reference to the list of batteries.
-    pub fn get_batteries(&self) -> &Vec<Battery> {
+    pub fn get_batteries(&self) -> &Vec<Rc<Battery>> {
         &self.batteries
     }
 

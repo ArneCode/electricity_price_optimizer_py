@@ -9,6 +9,7 @@ use crate::{
             variable::VariableAction,
         },
     },
+    schedule::Schedule,
     time::Time,
 };
 
@@ -77,6 +78,10 @@ impl State {
 
     pub fn get_cost(&mut self) -> i64 {
         self.smart_home_flow.get_cost()
+    }
+
+    pub fn get_schedule(&mut self) -> Schedule {
+        self.smart_home_flow.get_schedule()
     }
     // pub fn to_fixed_context(&self) -> OptimizerContext {
     //     let mut new_context = self.context.clone();

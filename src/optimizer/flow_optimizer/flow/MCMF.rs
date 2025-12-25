@@ -52,6 +52,10 @@ impl MinCostFlow {
         self.t
     }
 
+    pub fn get_flow(&self, edge_id: usize) -> i64 {
+        self.edges[edge_id ^ 1].f
+    }
+
     pub fn new_node(&mut self) -> usize {
         self.adj.push(vec![]);
         self.n += 1;
@@ -187,9 +191,14 @@ impl MinCostFlow {
     }
 
     pub fn update_flow(&mut self) -> (i64, i64) {
+        println!("Updating flow...");
         while self.spfa() {
             self.extend();
         }
+        println!(
+            "Flow updated: cost = {}, flow = {}",
+            self.mincost, self.maxflow
+        );
         return (self.mincost, self.maxflow);
     }
 }

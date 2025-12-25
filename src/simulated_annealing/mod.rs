@@ -2,6 +2,7 @@ use rand::Rng;
 
 use crate::{
     optimizer_context::OptimizerContext,
+    schedule::{self, Schedule},
     simulated_annealing::{
         change::{Change, multi_change::MultiChange},
         state::State,
@@ -65,7 +66,7 @@ pub mod state;
 ///
 /// # Panics
 /// This function may panic if the `OptimizerContext` contains invalid or inconsistent data.
-pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
+pub fn run_simulated_annealing(context: OptimizerContext) -> (i64, Schedule) {
     let mut state = State::new(context);
     let mut temperature: f64 = 10.0;
 
@@ -97,7 +98,8 @@ pub fn run_simulated_annealing(context: OptimizerContext) -> i64 {
         println!("temperature: {temperature}, cost: {old_cost}");
     }
 
-    old_cost
+    let schedule = state.get_schedule();
+    (old_cost, schedule)
 
     // somehow also get the final schedule out of the state
 }
@@ -129,7 +131,7 @@ mod tests {
         let electricity_price_data = [10; STEPS_PER_DAY as usize];
         let generated_electricity_data = [100; STEPS_PER_DAY as usize];
         let beyond_control_consumption_data = [20; STEPS_PER_DAY as usize];
-        let batteries = vec![Battery::new(1000, 10, 10, 7, 1.0, 1)];
+        let batteries = vec![Rc::new(Battery::new(1000, 10, 10, 7, 1.0, 1))];
         let constant_actions = vec![Rc::new(ConstantAction::new(
             Time::new(0, 0),
             Time::new(2, 0),
@@ -137,13 +139,13 @@ mod tests {
             300,
             2,
         ))];
-        let variable_actions = Rc::new(vec![VariableAction::new(
+        let variable_actions = vec![Rc::new(VariableAction::new(
             Time::new(1, 15),
             Time::new(10, 0),
             300,
             100,
             3,
-        )]);
+        ))];
 
         let context = OptimizerContext::new(
             Prognoses::new(electricity_price_data),
@@ -153,7 +155,7 @@ mod tests {
             constant_actions,
             variable_actions,
         ); // Assuming a constructor exists
-        let result = run_simulated_annealing(context);
+        let (result, schedule) = run_simulated_annealing(context);
         println!("result: {result}");
         // Add assertions to verify the results
     }
@@ -161,8 +163,9 @@ mod tests {
     #[test]
     fn test_simulated_annealing2() {
         let start = Instant::now();
-        let electricity_price: Prognoses<i32> =
-            Prognoses::from_closure(|t| (t as i32 - (STEPS_PER_DAY as i32 / 2)).abs() as i32 + 5);
+        let electricity_price: Prognoses<i32> = Prognoses::from_closure(|t| {
+            (t.to_timestep() as i32 - (STEPS_PER_DAY as i32 / 2)).abs() as i32 + 5
+        });
         // downward parabola with maximum in the middle of the day. Low prices at the edges of the day.
         // let generated_electricity: Prognoses<i32> = Prognoses::from_closure(|t| {
         //     ((STEPS_PER_DAY as i32 / 2).pow(2) + 5 - (t as i32 - (STEPS_PER_DAY as i32 / 2)).pow(2))
@@ -172,7 +175,7 @@ mod tests {
 
         let beyond_control_consumption: Prognoses<i32> = Prognoses::from_closure(|_t| 5);
 
-        let batteries = vec![Battery::new(1000, 50, 50, 7, 1.0, 1)];
+        let batteries = vec![Rc::new(Battery::new(1000, 50, 50, 7, 1.0, 1))];
 
         let constant_actions: Vec<Rc<ConstantAction>> = vec![Rc::new(ConstantAction::new(
             Time::new(0, 0),
@@ -182,13 +185,13 @@ mod tests {
             2,
         ))];
 
-        let variable_actions: Rc<Vec<VariableAction>> = Rc::new(vec![VariableAction::new(
+        let variable_actions = vec![Rc::new(VariableAction::new(
             Time::new(6, 0),
             Time::new(18, 0),
             500,
             100,
             3,
-        )]);
+        ))];
 
         let context = OptimizerContext::new(
             electricity_price,
@@ -199,7 +202,8 @@ mod tests {
             variable_actions,
         );
 
-        let result = run_simulated_annealing(context);
+        let (result, schedule) = run_simulated_annealing(context);
+        println!("schedule: {schedule:?}");
         println!("result: {result}");
         let duration = start.elapsed();
         println!("Time elapsed in test() is: {:?}", duration);

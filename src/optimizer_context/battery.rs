@@ -1,4 +1,9 @@
+use std::rc::Rc;
+
+use crate::optimizer_context::prognoses::Prognoses;
+
 /// A struct representing a battery with various attributes.
+#[derive(Debug, Clone)]
 pub struct Battery {
     /// The maximum capacity of the battery.
     capacity: i32,
@@ -68,5 +73,28 @@ impl Battery {
     /// Returns the initial charge level of the battery.
     pub fn get_initial_level(&self) -> i32 {
         return self.initial_level;
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct AssignedBattery {
+    battery: Rc<Battery>,
+    charge_level: Prognoses<u32>,
+}
+
+impl AssignedBattery {
+    pub fn new(battery: Rc<Battery>, charge_level: Prognoses<u32>) -> Self {
+        Self {
+            battery,
+            charge_level,
+        }
+    }
+
+    pub fn get_battery(&self) -> &Rc<Battery> {
+        &self.battery
+    }
+
+    pub fn get_charge_level(&self) -> &Prognoses<u32> {
+        &self.charge_level
     }
 }

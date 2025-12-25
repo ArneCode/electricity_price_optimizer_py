@@ -3,6 +3,7 @@ use std::rc::Rc;
 use crate::time::Time;
 
 /// A variable action that consumes a total amount of energy within specified time bounds, with a maximum consumption limit per timestep.
+#[derive(Debug, Clone)]
 pub struct VariableAction {
     /// The earliest time the action can start.
     pub start: Time,
@@ -71,6 +72,7 @@ impl VariableAction {
 }
 
 /// A variable action where the consumption per timestep has been fixed to specific values.
+#[derive(Debug, Clone)]
 pub struct AssignedVariableAction {
     /// The variable action being assigned.
     action: Rc<VariableAction>,

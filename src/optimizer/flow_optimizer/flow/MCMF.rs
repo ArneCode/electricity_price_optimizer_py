@@ -217,7 +217,7 @@ impl MinCostFlow {
             inq[u] = false;
             for &id in &self.adj[u] {
                 let e = &self.edges[id];
-                if e.f > 0 && self.dist[e.to] > self.dist[u] + e.cost && e.cost >= 0 {
+                if e.f > 0 && self.dist[e.to] > self.dist[u] + e.cost {
                     self.dist[e.to] = self.dist[u] + e.cost;
                     self.pref[e.to] = u;
                     self.con[e.to] = id;

@@ -1,16 +1,16 @@
 use std::{
-    fmt::Display,
+    fmt::Debug,
     ops::{Add, Range, Sub},
 };
 
-const MINUTES_PER_TIMESTEP: u32 = 5;
+const MINUTES_PER_TIMESTEP: u32 = 1;
 
 const MINUTES_PER_DAY: u32 = 60 * 24;
 pub const STEPS_PER_DAY: u32 = MINUTES_PER_DAY / MINUTES_PER_TIMESTEP;
 
 /// Represents a specific time of day in minutes.
 /// Provides methods for conversion between time and timesteps.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Time {
     /// Total minutes since the current time.
     pub(crate) minutes: u32,
@@ -68,14 +68,6 @@ impl Sub<Time> for Time {
     }
 }
 
-impl Display for Time {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let hours = self.minutes / 60;
-        let minutes = self.minutes % 60;
-        write!(f, "{:02}:{:02}", hours, minutes)
-    }
-}
-
 pub trait TimeIterator {
     type T: Iterator<Item = Time>;
     fn iter_steps(&self) -> Self::T;
@@ -86,5 +78,13 @@ impl TimeIterator for Range<Time> {
         let start_timestep = self.start.to_timestep();
         let end_timestep = self.end.to_timestep();
         (start_timestep..end_timestep).map(Time::from_timestep)
+    }
+}
+
+impl Debug for Time {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let hours = self.minutes / 60;
+        let minutes = self.minutes % 60;
+        write!(f, "{:02}:{:02}", hours, minutes)
     }
 }

@@ -21,7 +21,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(context: OptimizerContext) -> Self {
+    pub fn new_random<R: rand::Rng>(context: OptimizerContext, rng: &mut R) -> Self {
         let constant_actions: HashMap<u32, AssignedConstantAction> = context
             .get_constant_actions()
             .iter()
@@ -31,9 +31,20 @@ impl State {
                 //     action.get_end_before().get_minutes() - action.duration.get_minutes();
                 // let middle_minutes = (start_minutes + end_minutes) / 2;
                 // AssignedConstantAction::new(action.clone(), Time::new(0, middle_minutes))
+                // (
+                //     action.get_id(),
+                //     AssignedConstantAction::new(action.clone(), action.get_start_from()),
+                // )
+                let start_bound = action.get_start_from().to_timestep();
+                let end_bound =
+                    action.get_end_before().to_timestep() - action.duration.to_timestep();
+                let random_start_step = rng.random_range(start_bound..=end_bound);
                 (
                     action.get_id(),
-                    AssignedConstantAction::new(action.clone(), action.get_start_from()),
+                    AssignedConstantAction::new(
+                        action.clone(),
+                        Time::from_timestep(random_start_step),
+                    ),
                 )
             })
             .collect();
@@ -41,6 +52,7 @@ impl State {
             context.get_generated_electricity(),
             context.get_electricity_price(),
             context.get_beyond_control_consumption(),
+            context.get_first_timestep_fraction(),
         )
         .add_batteries(context.get_batteries())
         .add_actions(context.get_variable_actions())

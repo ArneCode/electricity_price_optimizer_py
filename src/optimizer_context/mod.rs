@@ -43,6 +43,10 @@ pub struct OptimizerContext {
     constant_actions: Vec<Rc<ConstantAction>>,
     /// Variable actions that can be scheduled
     variable_actions: Vec<Rc<VariableAction>>,
+
+    /// The first timestep might not be a full timestep
+    /// This parameter dictates what fraction of a full timestep the first timestep is
+    first_timestep_fraction: f32,
 }
 impl OptimizerContext {
     ///
@@ -65,6 +69,7 @@ impl OptimizerContext {
         batteries: Vec<Rc<Battery>>,
         constant_actions: Vec<Rc<ConstantAction>>,
         variable_actions: Vec<Rc<VariableAction>>,
+        first_timestep_fraction: f32,
     ) -> Self {
         Self {
             electricity_price: Rc::new(electricity_price),
@@ -73,6 +78,7 @@ impl OptimizerContext {
             batteries: batteries,
             constant_actions,
             variable_actions,
+            first_timestep_fraction,
         }
     }
 
@@ -110,5 +116,10 @@ impl OptimizerContext {
     /// Returns a reference to the beyond control consumption prognoses.
     pub fn get_beyond_control_consumption(&self) -> &Prognoses<i32> {
         &self.beyond_control_consumption
+    }
+
+    /// Returns the fraction of the first timestep.
+    pub fn get_first_timestep_fraction(&self) -> f32 {
+        self.first_timestep_fraction
     }
 }

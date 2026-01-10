@@ -21,14 +21,6 @@ impl FlowWrapper {
         Self { inner, node_map }
     }
 
-    pub fn source(&self) -> usize {
-        self.inner.get_source()
-    }
-
-    pub fn sink(&self) -> usize {
-        self.inner.get_sink()
-    }
-
     fn node(&mut self, key: FlowNode) -> usize {
         if let Some(&id) = self.node_map.get(&key) {
             id

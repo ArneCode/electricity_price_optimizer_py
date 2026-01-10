@@ -277,18 +277,6 @@ impl MinCostFlow {
             self.pi.resize(n, 0);
         }
 
-        // // Phase 1: SPFA with cycle cancellation to handle negative edges
-        // // and establish valid potentials
-        // while self.spfa_with_cycle_cancel() {
-        //     self.extend();
-        //     break; // One SPFA iteration is usually enough
-        // }
-
-        // // Phase 2: Dijkstra for remaining augmentations (fast!)
-        // while self.dijkstra() {
-        //     self.extend();
-        // }
-
         while self.spfa() {
             self.extend();
         }

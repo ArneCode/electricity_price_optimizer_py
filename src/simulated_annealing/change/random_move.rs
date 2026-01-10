@@ -22,7 +22,7 @@ impl Change for RandomMoveChange {
         state.add_constant_action(new_action);
 
         println!(
-            "Moved action {} from {} to {}",
+            "Moved action {} from {:?} to {:?}",
             self.action_id, self.old_time, self.new_time
         );
     }
@@ -35,7 +35,7 @@ impl Change for RandomMoveChange {
         state.add_constant_action(old_action);
 
         println!(
-            "Reverted action {} from {} to {}",
+            "Reverted action {} from {:?} to {:?}",
             self.action_id, self.new_time, self.old_time
         );
     }

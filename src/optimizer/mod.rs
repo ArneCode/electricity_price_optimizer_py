@@ -164,12 +164,14 @@ pub trait Blueprint<F, T> {
 pub struct SmartHomeFlowBuilder {
     flow: FlowWrapper,
     blueprint: SmartHomeBlueprint,
+    first_timestep_fraction: f32,
 }
 impl SmartHomeFlowBuilder {
     pub fn new(
         generate_prog: &Prognoses<i32>,
         price_prog: &Prognoses<i32>,
         consume_prog: &Prognoses<i32>,
+        first_timestep_fraction: f32,
     ) -> Self {
         let mut flow = FlowWrapper::new();
         let mut consumption_blueprint = NetworkConsumptionBlueprint::new();
@@ -219,7 +221,11 @@ impl SmartHomeFlowBuilder {
 
         let blueprint = SmartHomeBlueprint::new(consumption_blueprint);
 
-        Self { flow, blueprint }
+        Self {
+            flow,
+            blueprint,
+            first_timestep_fraction,
+        }
     }
 
     pub fn add_battery(mut self, battery: &Rc<Battery>) -> Self {
@@ -237,19 +243,31 @@ impl SmartHomeFlowBuilder {
 
         // Wire to Batteries
         for t in 0..STEPS_PER_DAY {
+            let max_charge = if t == 0 {
+                (battery.get_max_charge() as f32 * self.first_timestep_fraction).round() as i32
+            } else {
+                battery.get_max_charge()
+            } as i64;
+
             // Wire to battery
             self.flow.add_edge(
                 FlowNode::Wire(Time::from_timestep(t)),
                 FlowNode::Battery(id as usize, Time::from_timestep(t)),
-                battery.get_max_charge() as i64,
+                max_charge,
                 0,
             );
+
+            let max_output = if t == 0 {
+                (battery.get_max_output() as f32 * self.first_timestep_fraction).round() as i32
+            } else {
+                battery.get_max_output()
+            } as i64;
 
             // Battery to wire
             self.flow.add_edge(
                 FlowNode::Battery(id as usize, Time::from_timestep(t)),
                 FlowNode::Wire(Time::from_timestep(t)),
-                battery.get_max_output() as i64,
+                max_output,
                 0,
             );
         }
@@ -277,11 +295,16 @@ impl SmartHomeFlowBuilder {
     pub fn add_action(mut self, action: &Rc<VariableAction>) -> Self {
         let mut variable_action_blueprint = VariableActionBlueprint::new(action.clone());
         for t in (action.get_start()..action.get_end()).iter_steps() {
+            let max_consumption = if t.to_timestep() == 0 {
+                (action.get_max_consumption() as f32 * self.first_timestep_fraction).round() as i32
+            } else {
+                action.get_max_consumption()
+            } as i64;
             // Wire to action
             let edge_id = self.flow.add_edge(
                 FlowNode::Wire(t),
                 FlowNode::Action(action.get_id() as usize),
-                action.get_max_consumption() as i64,
+                max_consumption,
                 0,
             );
             variable_action_blueprint.set_relevant_edge(t, edge_id);

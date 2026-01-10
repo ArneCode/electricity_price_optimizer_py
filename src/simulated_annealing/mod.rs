@@ -67,13 +67,16 @@ pub mod state;
 /// # Panics
 /// This function may panic if the `OptimizerContext` contains invalid or inconsistent data.
 pub fn run_simulated_annealing(context: OptimizerContext) -> (i64, Schedule) {
-    let mut state = State::new(context);
-    let mut temperature: f64 = 10.0;
-
     let mut rng = rand::rng();
 
+    let mut state = State::new_random(context, &mut rng);
+    let mut temperature: f64 = 40.0;
+
     let mut old_cost = state.get_cost();
+    let mut n_iterations = 0;
+    let mut min_cost = old_cost;
     while temperature > 0.1 {
+        n_iterations += 1;
         // Determine random_move_sigma based on temperature
         let random_move_sigma = 30.0 * temperature.sqrt();
         let change = MultiChange::new_random(&mut rng, &state, random_move_sigma, 2);
@@ -94,10 +97,14 @@ pub fn run_simulated_annealing(context: OptimizerContext) -> (i64, Schedule) {
                 change.undo(&mut state);
             }
         }
-        temperature *= 0.99; // Cool down
+        if old_cost < min_cost {
+            min_cost = old_cost;
+        }
+        temperature *= 0.999; // Cool down
         println!("temperature: {temperature}, cost: {old_cost}");
     }
 
+    println!("Total iterations: {n_iterations}, min cost: {min_cost}");
     let schedule = state.get_schedule();
     (old_cost, schedule)
 
@@ -154,6 +161,7 @@ mod tests {
             batteries,
             constant_actions,
             variable_actions,
+            1.0,
         ); // Assuming a constructor exists
         let (result, schedule) = run_simulated_annealing(context);
         println!("result: {result}");
@@ -171,27 +179,47 @@ mod tests {
         //     ((STEPS_PER_DAY as i32 / 2).pow(2) + 5 - (t as i32 - (STEPS_PER_DAY as i32 / 2)).pow(2))
         //         .min(300)
         // });
-        let generated_electricity: Prognoses<i32> = Prognoses::from_closure(|_t| 0); // constant generation of 100 units
+        let generated_electricity: Prognoses<i32> = Prognoses::from_closure(|_t| 70); // constant generation of 100 units
 
-        let beyond_control_consumption: Prognoses<i32> = Prognoses::from_closure(|_t| 5);
+        let beyond_control_consumption: Prognoses<i32> = Prognoses::from_closure(|t| -> i32 {
+            (t.to_timestep() / (STEPS_PER_DAY / 4)) as i32 * 10
+        });
 
-        let batteries = vec![Rc::new(Battery::new(1000, 50, 50, 7, 1.0, 1))];
+        let batteries = vec![Rc::new(Battery::new(1000, 50, 50, 100, 1.0, 1))];
 
-        let constant_actions: Vec<Rc<ConstantAction>> = vec![Rc::new(ConstantAction::new(
-            Time::new(0, 0),
-            Time::new(23, 55),
-            Time::new(1, 0),
-            1000,
-            2,
-        ))];
+        let constant_actions: Vec<Rc<ConstantAction>> = vec![
+            Rc::new(ConstantAction::new(
+                Time::new(0, 0),
+                Time::new(23, 55),
+                Time::new(1, 0),
+                300,
+                2,
+            )),
+            Rc::new(ConstantAction::new(
+                Time::new(12, 0),
+                Time::new(23, 55),
+                Time::new(2, 0),
+                150,
+                3,
+            )),
+        ];
 
-        let variable_actions = vec![Rc::new(VariableAction::new(
-            Time::new(6, 0),
-            Time::new(18, 0),
-            500,
-            100,
-            3,
-        ))];
+        let variable_actions = vec![
+            Rc::new(VariableAction::new(
+                Time::new(6, 0),
+                Time::new(18, 0),
+                500,
+                100,
+                3,
+            )),
+            Rc::new(VariableAction::new(
+                Time::new(0, 0),
+                Time::new(23, 55),
+                2000,
+                50,
+                4,
+            )),
+        ];
 
         let context = OptimizerContext::new(
             electricity_price,
@@ -200,10 +228,11 @@ mod tests {
             batteries,
             constant_actions,
             variable_actions,
+            1.0,
         );
 
         let (result, schedule) = run_simulated_annealing(context);
-        println!("schedule: {schedule:?}");
+        // println!("schedule: {schedule:#?}");
         println!("result: {result}");
         let duration = start.elapsed();
         println!("Time elapsed in test() is: {:?}", duration);

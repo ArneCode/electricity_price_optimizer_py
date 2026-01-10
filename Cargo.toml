@@ -1,0 +1,11 @@
+[package]
+name = "electricity_price_optimizer_py"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+# This makes it a cdylib for Python
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.27.2", features = ["extension-module"] }

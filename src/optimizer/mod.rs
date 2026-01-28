@@ -143,18 +143,25 @@ impl SmartHomeBlueprint {
 
 impl Blueprint<FlowWrapper, Schedule> for SmartHomeBlueprint {
     fn construct(&self, from: &FlowWrapper) -> Schedule {
-        let batteries: Vec<AssignedBattery> = self
+        let batteries: HashMap<u32, AssignedBattery> = self
             .battery_blueprints
             .iter()
             .map(|bp| bp.construct(from))
+            .map(|ab| (ab.get_battery().get_id(), ab))
             .collect();
-        let variable_actions: Vec<AssignedVariableAction> = self
+        let variable_actions: HashMap<u32, AssignedVariableAction> = self
             .variable_action_blueprints
             .iter()
             .map(|bp| bp.construct(from))
+            .map(|ava| (ava.get_id(), ava))
             .collect();
         let network_consumption = self.network_consumption_blueprint.construct(from);
-        Schedule::new(Vec::new(), variable_actions, batteries, network_consumption)
+        Schedule::new(
+            HashMap::new(),
+            variable_actions,
+            batteries,
+            network_consumption,
+        )
     }
 }
 

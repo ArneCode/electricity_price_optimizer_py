@@ -1,11 +1,11 @@
 use crate::{optimizer_context::OptimizerContext, schedule::Schedule};
 
+mod helper;
 pub mod optimizer;
 pub mod optimizer_context;
-mod schedule;
+pub mod schedule;
 pub mod simulated_annealing;
 pub mod time;
-mod helper;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right

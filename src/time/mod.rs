@@ -3,7 +3,7 @@ use std::{
     ops::{Add, Range, Sub},
 };
 
-const MINUTES_PER_TIMESTEP: u32 = 1;
+pub const MINUTES_PER_TIMESTEP: u32 = 1;
 
 const MINUTES_PER_DAY: u32 = 60 * 24;
 pub const STEPS_PER_DAY: u32 = MINUTES_PER_DAY / MINUTES_PER_TIMESTEP;
@@ -45,6 +45,12 @@ impl Time {
     /// Returns the total minutes since the current time.
     pub fn get_minutes(&self) -> u32 {
         self.minutes
+    }
+
+    pub fn get_next_timestep(&self) -> Time {
+        Time {
+            minutes: self.minutes + MINUTES_PER_TIMESTEP,
+        }
     }
 }
 

@@ -1,4 +1,7 @@
-use std::{fmt::Debug, ops::Add};
+use std::{
+    fmt::Debug,
+    ops::{Add, AddAssign},
+};
 
 use crate::{
     optimizer_context::action::constant::AssignedConstantAction,
@@ -55,6 +58,16 @@ impl<T: Debug + Clone> Prognoses<T> {
         Self { data }
     }
 }
+impl<T: Debug + Clone + Default> Prognoses<T> {
+    // same but can return Result<T, E>
+    pub fn from_closure_result<F: Fn(Time) -> Result<T, E>, E>(f: F) -> Result<Self, E> {
+        let mut data: [T; STEPS_PER_DAY as usize] = std::array::from_fn(|_| T::default());
+        for t in 0..STEPS_PER_DAY as usize {
+            data[t] = f(Time::from_timestep(t as u32))?;
+        }
+        Ok(Self { data })
+    }
+}
 
 impl<T: From<i32> + Add<T, Output = T> + Clone> Prognoses<T> {
     /// Adds the consumption of a constant action to the prognoses data.
@@ -69,6 +82,33 @@ impl<T: From<i32> + Add<T, Output = T> + Clone> Prognoses<T> {
 
         for t in start..end {
             self.data[t] = self.data[t].clone() + T::from(consumption);
+        }
+    }
+}
+
+impl<T> Add for Prognoses<T>
+where
+    T: Add<T, Output = T> + Clone,
+{
+    type Output = Prognoses<T>;
+
+    fn add(self, other: Prognoses<T>) -> Prognoses<T> {
+        let mut result_data: [T; STEPS_PER_DAY as usize] =
+            std::array::from_fn(|_| self.data[0].clone());
+        for t in 0..STEPS_PER_DAY as usize {
+            result_data[t] = self.data[t].clone() + other.data[t].clone();
+        }
+        Prognoses { data: result_data }
+    }
+}
+
+impl<T> AddAssign for Prognoses<T>
+where
+    T: Add<T, Output = T> + Clone,
+{
+    fn add_assign(&mut self, other: Prognoses<T>) {
+        for t in 0..STEPS_PER_DAY as usize {
+            self.data[t] = self.data[t].clone() + other.data[t].clone();
         }
     }
 }

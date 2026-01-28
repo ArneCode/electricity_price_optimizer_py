@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::optimizer_context::prognoses::Prognoses;
+use crate::{optimizer_context::prognoses::Prognoses, time::Time};
 
 /// A struct representing a battery with various attributes.
 #[derive(Debug, Clone)]
@@ -15,7 +15,7 @@ pub struct Battery {
     maximum_output_rate: i32,
     efficiency: f32,
     /// Unique identifier for the battery. Used to distinguish between multiple batteries.
-    id: i32,
+    id: u32,
 }
 
 impl Battery {
@@ -39,7 +39,7 @@ impl Battery {
         maximum_charge_rate: i32,
         maximum_output_rate: i32,
         efficiency: f32,
-        id: i32,
+        id: u32,
     ) -> Self {
         assert!(
             initial_level <= capacity,
@@ -55,7 +55,7 @@ impl Battery {
         }
     }
     /// Returns the unique identifier of the battery.
-    pub fn get_id(&self) -> i32 {
+    pub fn get_id(&self) -> u32 {
         self.id
     }
     /// Returns the maximum charge rate of the battery.
@@ -94,7 +94,7 @@ impl AssignedBattery {
         &self.battery
     }
 
-    pub fn get_charge_level(&self) -> &Prognoses<u32> {
-        &self.charge_level
+    pub fn get_charge_level(&self, time: Time) -> Option<&u32> {
+        self.charge_level.get(time)
     }
 }

@@ -1,4 +1,8 @@
-use std::rc::Rc;
+use std::{
+    ops::{Deref, DerefMut},
+    panic,
+    rc::Rc,
+};
 
 use crate::time::Time;
 
@@ -98,5 +102,24 @@ impl AssignedVariableAction {
             action,
             consumption,
         }
+    }
+
+    pub fn get_consumption(&self, time: Time) -> u32 {
+        if time < self.action.start || time >= self.action.end {
+            panic!(
+                "Time {:?} is out of bounds for action starting at {:?} and ending at {:?}",
+                time, self.action.start, self.action.end
+            );
+        }
+        let index = (time.to_timestep() - self.action.start.to_timestep()) as usize;
+        self.consumption[index]
+    }
+}
+
+impl Deref for AssignedVariableAction {
+    type Target = VariableAction;
+
+    fn deref(&self) -> &Self::Target {
+        &self.action
     }
 }

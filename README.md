@@ -1,6 +1,9 @@
 # Backend
 
-
+Optimizer compile:
+cd optimizer
+maturin develop --release
+cd ..
 
 ## Getting started
 

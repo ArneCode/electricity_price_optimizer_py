@@ -12,7 +12,7 @@ pub struct ConstantAction {
     /// The duration of the action.
     pub duration: Time,
     /// The fixed consumption amount of the action for every timestep.
-    pub consumption: i32,
+    pub consumption: i64,
     id: u32,
 }
 impl ConstantAction {
@@ -31,7 +31,7 @@ impl ConstantAction {
         start_from: Time,
         end_before: Time,
         duration: Time,
-        consumption: i32,
+        consumption: i64,
         id: u32,
     ) -> Self {
         assert!(
@@ -60,7 +60,7 @@ impl ConstantAction {
     }
 
     /// Returns the consumption of the action.
-    pub fn get_consumption(&self) -> i32 {
+    pub fn get_consumption(&self) -> i64 {
         self.consumption
     }
 

@@ -14,9 +14,9 @@ pub struct VariableAction {
     /// The latest time the action must end.
     pub end: Time,
     /// The total consumption amount of the action.
-    pub total_consumption: i32,
+    pub total_consumption: i64,
     /// The maximum consumption amount of the action for every timestep.
-    pub max_consumption: i32,
+    pub max_consumption: i64,
     /// The unique identifier for the action.
     id: u32,
 }
@@ -37,8 +37,8 @@ impl VariableAction {
     pub fn new(
         start: Time,
         end: Time,
-        total_consumption: i32,
-        max_consumption: i32,
+        total_consumption: i64,
+        max_consumption: i64,
         id: u32,
     ) -> Self {
         assert!(
@@ -66,11 +66,11 @@ impl VariableAction {
         self.id
     }
     /// Returns the total consumption of the action.
-    pub fn get_total_consumption(&self) -> i32 {
+    pub fn get_total_consumption(&self) -> i64 {
         self.total_consumption
     }
     /// Returns the maximum consumption per timestep of the action.
-    pub fn get_max_consumption(&self) -> i32 {
+    pub fn get_max_consumption(&self) -> i64 {
         self.max_consumption
     }
 }
@@ -81,7 +81,7 @@ pub struct AssignedVariableAction {
     /// The variable action being assigned.
     action: Rc<VariableAction>,
     /// The consumption values for each timestep of the action.
-    consumption: Vec<u32>,
+    consumption: Vec<i64>,
 }
 
 impl AssignedVariableAction {
@@ -92,7 +92,7 @@ impl AssignedVariableAction {
     /// * `consumption` - The consumption values for each timestep of the action.
     /// # Panics
     /// * Panics if the length of the consumption vector does not match the duration of the action.
-    pub fn new(action: Rc<VariableAction>, consumption: Vec<u32>) -> Self {
+    pub fn new(action: Rc<VariableAction>, consumption: Vec<i64>) -> Self {
         assert_eq!(
             consumption.len() as u32,
             action.end.to_timestep() - action.start.to_timestep(),
@@ -104,7 +104,7 @@ impl AssignedVariableAction {
         }
     }
 
-    pub fn get_consumption(&self, time: Time) -> u32 {
+    pub fn get_consumption(&self, time: Time) -> i64 {
         if time < self.action.start || time >= self.action.end {
             panic!(
                 "Time {:?} is out of bounds for action starting at {:?} and ending at {:?}",

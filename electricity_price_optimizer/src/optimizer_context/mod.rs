@@ -30,11 +30,11 @@ use crate::optimizer_context::{
 #[derive(Clone)]
 pub struct OptimizerContext {
     /// Price of electricity at each timestep
-    electricity_price: Rc<Prognoses<i32>>,
+    electricity_price: Rc<Prognoses<i64>>,
     /// Amount of electricity generated at each timestep
-    generated_electricity: Rc<Prognoses<i32>>,
+    generated_electricity: Rc<Prognoses<i64>>,
     /// Consumption that is not controllable by the system
-    beyond_control_consumption: Prognoses<i32>,
+    beyond_control_consumption: Prognoses<i64>,
 
     /// Batteries available in the system
     batteries: Vec<Rc<Battery>>,
@@ -63,9 +63,9 @@ impl OptimizerContext {
     ///
     /// A fully constructed [`OptimizerContext`] ready for use in optimization.
     pub fn new(
-        electricity_price: Prognoses<i32>,
-        generated_electricity: Prognoses<i32>,
-        beyond_control_consumption: Prognoses<i32>,
+        electricity_price: Prognoses<i64>,
+        generated_electricity: Prognoses<i64>,
+        beyond_control_consumption: Prognoses<i64>,
         batteries: Vec<Rc<Battery>>,
         constant_actions: Vec<Rc<ConstantAction>>,
         variable_actions: Vec<Rc<VariableAction>>,
@@ -104,17 +104,17 @@ impl OptimizerContext {
     }
 
     /// Returns a reference to the electricity price prognoses.
-    pub fn get_electricity_price(&self) -> &Rc<Prognoses<i32>> {
+    pub fn get_electricity_price(&self) -> &Rc<Prognoses<i64>> {
         &self.electricity_price
     }
 
     /// Returns a reference to the generated electricity prognoses.
-    pub fn get_generated_electricity(&self) -> &Rc<Prognoses<i32>> {
+    pub fn get_generated_electricity(&self) -> &Rc<Prognoses<i64>> {
         &self.generated_electricity
     }
 
     /// Returns a reference to the beyond control consumption prognoses.
-    pub fn get_beyond_control_consumption(&self) -> &Prognoses<i32> {
+    pub fn get_beyond_control_consumption(&self) -> &Prognoses<i64> {
         &self.beyond_control_consumption
     }
 

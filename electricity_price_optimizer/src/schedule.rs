@@ -11,7 +11,7 @@ pub struct Schedule {
     pub constant_actions: HashMap<u32, AssignedConstantAction>,
     pub variable_actions: HashMap<u32, AssignedVariableAction>,
     pub batteries: HashMap<u32, AssignedBattery>,
-    pub network_consumption: Prognoses<i32>,
+    pub network_consumption: Prognoses<i64>,
 }
 
 impl Schedule {
@@ -19,7 +19,7 @@ impl Schedule {
         constant_actions: HashMap<u32, AssignedConstantAction>,
         variable_actions: HashMap<u32, AssignedVariableAction>,
         batteries: HashMap<u32, AssignedBattery>,
-        network_consumption: Prognoses<i32>,
+        network_consumption: Prognoses<i64>,
     ) -> Self {
         Self {
             constant_actions,

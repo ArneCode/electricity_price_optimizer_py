@@ -171,18 +171,18 @@ mod tests {
     #[test]
     fn test_simulated_annealing2() {
         let start = Instant::now();
-        let electricity_price: Prognoses<i32> = Prognoses::from_closure(|t| {
-            (t.to_timestep() as i32 - (STEPS_PER_DAY as i32 / 2)).abs() as i32 + 5
+        let electricity_price: Prognoses<i64> = Prognoses::from_closure(|t| {
+            (t.to_timestep() as i64 - (STEPS_PER_DAY as i64 / 2)).abs() as i64 + 5
         });
         // downward parabola with maximum in the middle of the day. Low prices at the edges of the day.
-        // let generated_electricity: Prognoses<i32> = Prognoses::from_closure(|t| {
-        //     ((STEPS_PER_DAY as i32 / 2).pow(2) + 5 - (t as i32 - (STEPS_PER_DAY as i32 / 2)).pow(2))
+        // let generated_electricity: Prognoses<i64> = Prognoses::from_closure(|t| {
+        //     ((STEPS_PER_DAY as i64 / 2).pow(2) + 5 - (t as i64 - (STEPS_PER_DAY as i64 / 2)).pow(2))
         //         .min(300)
         // });
-        let generated_electricity: Prognoses<i32> = Prognoses::from_closure(|_t| 70); // constant generation of 100 units
+        let generated_electricity: Prognoses<i64> = Prognoses::from_closure(|_t| 70); // constant generation of 100 units
 
-        let beyond_control_consumption: Prognoses<i32> = Prognoses::from_closure(|t| -> i32 {
-            (t.to_timestep() / (STEPS_PER_DAY / 4)) as i32 * 10
+        let beyond_control_consumption: Prognoses<i64> = Prognoses::from_closure(|t| -> i64 {
+            (t.to_timestep() / (STEPS_PER_DAY / 4)) as i64 * 10
         });
 
         let batteries = vec![Rc::new(Battery::new(1000, 50, 50, 100, 1.0, 1))];

@@ -41,9 +41,9 @@ impl Blueprint<FlowWrapper, AssignedBattery> for BatteryBlueprint {
             let flow = from.get_flow(*edge_id);
             edge_flows.insert(*time, flow);
         }
-        let charge_level = Prognoses::from_closure(|t| {
-            edge_flows.get(&t).expect("Missing edge flow").clone() as u32
-        });
+        edge_flows.insert(Time::from_timestep(0), self.battery.get_initial_level());
+        let charge_level =
+            Prognoses::from_closure(|t| edge_flows.get(&t).expect("Missing edge flow").clone());
         AssignedBattery::new(self.battery.clone(), charge_level)
     }
 }
@@ -77,10 +77,7 @@ impl Blueprint<FlowWrapper, AssignedVariableAction> for VariableActionBlueprint 
         let end_time = self.variable_action.get_end();
         let consumption = (start_time..end_time)
             .iter_steps()
-            .map(|t| {
-                let flow = edge_flows.get(&t).expect("Missing edge flow").clone();
-                flow as u32
-            })
+            .map(|t| edge_flows.get(&t).expect("Missing edge flow").clone())
             .collect();
         AssignedVariableAction::new(self.variable_action.clone(), consumption)
     }
@@ -102,15 +99,15 @@ impl NetworkConsumptionBlueprint {
     }
 }
 
-impl Blueprint<FlowWrapper, Prognoses<i32>> for NetworkConsumptionBlueprint {
-    fn construct(&self, from: &FlowWrapper) -> Prognoses<i32> {
+impl Blueprint<FlowWrapper, Prognoses<i64>> for NetworkConsumptionBlueprint {
+    fn construct(&self, from: &FlowWrapper) -> Prognoses<i64> {
         Prognoses::from_closure(|t| {
             let edge_id = self
                 .relevant_edges
                 .get(&t)
                 .expect("Missing relevant edge for network consumption");
             let flow = from.get_flow(*edge_id);
-            flow as i32
+            flow as i64
         })
     }
 }
@@ -175,9 +172,9 @@ pub struct SmartHomeFlowBuilder {
 }
 impl SmartHomeFlowBuilder {
     pub fn new(
-        generate_prog: &Prognoses<i32>,
-        price_prog: &Prognoses<i32>,
-        consume_prog: &Prognoses<i32>,
+        generate_prog: &Prognoses<i64>,
+        price_prog: &Prognoses<i64>,
+        consume_prog: &Prognoses<i64>,
         first_timestep_fraction: f32,
     ) -> Self {
         let mut flow = FlowWrapper::new();
@@ -251,7 +248,7 @@ impl SmartHomeFlowBuilder {
         // Wire to Batteries
         for t in 0..STEPS_PER_DAY {
             let max_charge = if t == 0 {
-                (battery.get_max_charge() as f32 * self.first_timestep_fraction).round() as i32
+                (battery.get_max_charge() as f32 * self.first_timestep_fraction).round() as i64
             } else {
                 battery.get_max_charge()
             } as i64;
@@ -265,7 +262,7 @@ impl SmartHomeFlowBuilder {
             );
 
             let max_output = if t == 0 {
-                (battery.get_max_output() as f32 * self.first_timestep_fraction).round() as i32
+                (battery.get_max_output() as f32 * self.first_timestep_fraction).round() as i64
             } else {
                 battery.get_max_output()
             } as i64;
@@ -287,7 +284,7 @@ impl SmartHomeFlowBuilder {
                 battery.get_capacity() as i64,
                 0,
             );
-            battery_blueprint.set_relevant_edge(Time::from_timestep(t), edge_id);
+            battery_blueprint.set_relevant_edge(Time::from_timestep(t + 1), edge_id);
         }
         self.blueprint.add_battery_blueprint(battery_blueprint);
         self
@@ -303,7 +300,7 @@ impl SmartHomeFlowBuilder {
         let mut variable_action_blueprint = VariableActionBlueprint::new(action.clone());
         for t in (action.get_start()..action.get_end()).iter_steps() {
             let max_consumption = if t.to_timestep() == 0 {
-                (action.get_max_consumption() as f32 * self.first_timestep_fraction).round() as i32
+                (action.get_max_consumption() as f32 * self.first_timestep_fraction).round() as i64
             } else {
                 action.get_max_consumption()
             } as i64;

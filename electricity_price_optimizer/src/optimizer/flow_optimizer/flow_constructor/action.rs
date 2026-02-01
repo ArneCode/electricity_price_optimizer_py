@@ -16,12 +16,12 @@ pub(crate) fn construct_action(
     context: &OptimizerContext,
 ) {
     for a in context.get_variable_actions() {
-        let id = a.get_id() as i32;
+        let id = a.get_id() as i64;
         let task_start = a.get_start().to_timestep();
         let task_end = a.get_end().to_timestep();
 
         // Wire to Actions
-        for t in task_start..(task_end+1) {
+        for t in task_start..(task_end + 1) {
             let action_incoming_num = variable_map.get_persistent_variable_index(id, t);
             let action_max_consumption = a.get_max_consumption() as i64;
 

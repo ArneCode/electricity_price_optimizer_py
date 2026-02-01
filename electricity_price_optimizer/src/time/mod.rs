@@ -52,6 +52,12 @@ impl Time {
             minutes: self.minutes + MINUTES_PER_TIMESTEP,
         }
     }
+
+    pub fn get_day_end() -> Time {
+        Time {
+            minutes: MINUTES_PER_DAY,
+        }
+    }
 }
 
 impl Add<Time> for Time {

@@ -1,6 +1,7 @@
+mod units;
 use std::{fmt::Debug, rc::Rc};
 
-use chrono::{DateTime, TimeDelta, TimeZone, Timelike, Utc};
+use chrono::{DateTime, Datelike, TimeDelta, TimeZone, Timelike, Utc};
 use electricity_price_optimizer::{
     optimizer_context::{
         OptimizerContext as RustOptimizerContext,
@@ -25,6 +26,13 @@ use pyo3::{
     types::{PyModule, PyModuleMethods},
     wrap_pyfunction,
 };
+// gives to optimizer:
+// speeds in mWH per timestep
+// charge in  mWH
+// price in micro Euro per Wh
+// thus return cost is in milli micro Euro = nano Euro
+
+use crate::units::{Euro, EuroPerWh, Watt, WattHour, register_units_submodule};
 #[pyclass]
 struct PrognosesProvider {
     get_data: Py<PyAny>,
@@ -63,19 +71,7 @@ fn time_to_datetime(time: Time, start_time: DateTime<Utc>) -> DateTime<Utc> {
     // 6. Convert nanoseconds back into a DateTime object
     Utc.timestamp_nanos(res_ns)
 }
-
-fn datetime_to_time(dt: DateTime<Utc>, start_time: DateTime<Utc>) -> Result<Time, PyErr> {
-    if dt == start_time {
-        return Ok(Time::from_timestep(0));
-    }
-    if dt < start_time {
-        return Err(PyValueError::new_err(format!(
-            "DateTime {} is before start time {}",
-            dt, start_time
-        )));
-    }
-    // dt must be on a timestep boundary
-    // check:
+fn check_on_timestep_boundary(dt: DateTime<Utc>) -> PyResult<()> {
     if (dt.minute() % MINUTES_PER_TIMESTEP) != 0
         || dt.second() != 0
         || dt.timestamp_subsec_nanos() != 0
@@ -87,7 +83,29 @@ fn datetime_to_time(dt: DateTime<Utc>, start_time: DateTime<Utc>) -> Result<Time
             dt.timestamp_subsec_nanos()
         )));
     }
-    let duration = dt.signed_duration_since(start_time);
+    Ok(())
+}
+fn datetime_to_time(dt: DateTime<Utc>, start_time: DateTime<Utc>) -> Result<Time, PyErr> {
+    if dt == start_time {
+        return Ok(Time::from_timestep(0));
+    }
+    if dt < start_time {
+        return Err(PyValueError::new_err(format!(
+            "DateTime {} is before start time {}",
+            dt, start_time
+        )));
+    }
+    // the first datetime before or equal to dt that is on a timestep boundary
+    let base_dt = {
+        let minute = dt.minute() - (dt.minute() % MINUTES_PER_TIMESTEP);
+        Utc.with_ymd_and_hms(dt.year(), dt.month(), dt.day(), dt.hour(), minute, 0)
+            .single()
+            .ok_or_else(|| {
+                PyValueError::new_err(format!("Failed to create base datetime from {}", dt))
+            })?
+    };
+
+    let duration = dt.signed_duration_since(base_dt);
     let total_minutes = duration.num_minutes() as u32;
     let timesteps = total_minutes / MINUTES_PER_TIMESTEP;
     Ok(Time::from_timestep(timesteps))
@@ -111,6 +129,7 @@ impl PrognosesProvider {
     }
 }
 #[pyclass(unsendable)]
+#[derive(Clone)]
 pub struct ConstantAction {
     /// The earliest time the action can start.
     pub start_from: DateTime<Utc>,
@@ -119,7 +138,7 @@ pub struct ConstantAction {
     /// The duration of the action.
     pub duration: TimeDelta,
     /// The fixed consumption amount of the action for every timestep.
-    pub consumption: i32,
+    pub consumption: Watt,
     id: u32,
 }
 #[pymethods]
@@ -129,7 +148,7 @@ impl ConstantAction {
         start_from: DateTime<Utc>,
         end_before: DateTime<Utc>,
         duration: TimeDelta,
-        consumption: i32,
+        consumption: Watt,
         id: u32,
     ) -> Self {
         ConstantAction {
@@ -167,7 +186,7 @@ impl ConstantAction {
             start_time_converted,
             end_time_converted,
             duration,
-            self.consumption,
+            self.consumption.to_milli_watt_hour_per_timestep() as i64,
             self.id,
         ))
     }
@@ -197,9 +216,9 @@ pub struct VariableAction {
     /// The latest time the action must end.
     pub end: DateTime<Utc>,
     /// The total consumption amount of the action.
-    pub total_consumption: i32,
+    pub total_consumption: WattHour,
     /// The maximum consumption amount of the action for every timestep.
-    pub max_consumption: i32,
+    pub max_consumption: Watt,
     /// The unique identifier for the action.
     id: u32,
 }
@@ -209,8 +228,8 @@ impl VariableAction {
     fn new(
         start: DateTime<Utc>,
         end: DateTime<Utc>,
-        total_consumption: i32,
-        max_consumption: i32,
+        total_consumption: WattHour,
+        max_consumption: Watt,
         id: u32,
     ) -> Self {
         VariableAction {
@@ -230,8 +249,8 @@ impl VariableAction {
         Ok(RustVariableAction::new(
             start_time_converted,
             end_time_converted,
-            self.total_consumption,
-            self.max_consumption,
+            self.total_consumption.to_milli_wh() as i64,
+            self.max_consumption.to_milli_watt_hour_per_timestep() as i64,
             self.id,
         ))
     }
@@ -243,9 +262,12 @@ pub struct AssignedVariableAction {
 }
 #[pymethods]
 impl AssignedVariableAction {
-    fn get_consumption(&self, time: DateTime<Utc>) -> PyResult<u32> {
+    fn get_consumption(&self, time: DateTime<Utc>) -> PyResult<Watt> {
         let time_converted = datetime_to_time(time, self.start_timestamp)?;
-        Ok(self.inner.get_consumption(time_converted))
+        let consumption_per_timestep = self.inner.get_consumption(time_converted);
+        Ok(Watt::from_milli_watt_hour_per_timestep(
+            consumption_per_timestep as f64,
+        ))
     }
     fn get_id(&self) -> u32 {
         self.inner.get_id()
@@ -253,20 +275,20 @@ impl AssignedVariableAction {
 }
 #[pyclass(unsendable)]
 pub struct Battery {
-    pub capacity: i32,
-    pub max_charge_rate: i32,
-    pub max_discharge_rate: i32,
-    pub initial_charge: i32,
+    pub capacity: WattHour,
+    pub max_charge_rate: Watt,
+    pub max_discharge_rate: Watt,
+    pub initial_charge: WattHour,
     pub id: u32,
 }
 #[pymethods]
 impl Battery {
     #[new]
     fn new(
-        capacity: i32,
-        max_charge_rate: i32,
-        max_discharge_rate: i32,
-        initial_charge: i32,
+        capacity: WattHour,
+        max_charge_rate: Watt,
+        max_discharge_rate: Watt,
+        initial_charge: WattHour,
         id: u32,
     ) -> Self {
         Battery {
@@ -281,10 +303,10 @@ impl Battery {
 impl Battery {
     fn to_rust(&self) -> RustBattery {
         RustBattery::new(
-            self.capacity,
-            self.initial_charge,
-            self.max_charge_rate,
-            self.max_discharge_rate,
+            self.capacity.to_milli_wh() as i64,
+            self.initial_charge.to_milli_wh() as i64,
+            self.max_charge_rate.to_milli_watt_hour_per_timestep() as i64,
+            self.max_discharge_rate.to_milli_watt_hour_per_timestep() as i64,
             1.0,
             self.id,
         )
@@ -297,15 +319,40 @@ pub struct AssignedBattery {
 }
 #[pymethods]
 impl AssignedBattery {
-    fn get_charge_level(&self, time: DateTime<Utc>) -> PyResult<u32> {
+    fn get_charge_level(&self, time: DateTime<Utc>) -> PyResult<WattHour> {
         let time_converted = datetime_to_time(time, self.start_timestamp)?;
         if let Some(result) = self.inner.get_charge_level(time_converted) {
-            Ok(*result)
+            Ok(WattHour::from_milli_wh(*result as f64))
         } else {
             Err(PyValueError::new_err(
                 "Time out of range for battery charge level FIXME",
             ))
         }
+    }
+    fn get_charge_speed(&self, time: DateTime<Utc>) -> PyResult<Watt> {
+        let time_converted = datetime_to_time(time, self.start_timestamp)?;
+        let next_time = time_converted.get_next_timestep();
+        // get charge levels at time and next_time
+        // next time might be end of day in which case we return 0
+        let curr_level = if let Some(level) = self.inner.get_charge_level(time_converted) {
+            *level
+        } else {
+            return Err(PyValueError::new_err(
+                "Time out of range for battery charge level FIXME",
+            ));
+        };
+        let next_level = if let Some(level) = self.inner.get_charge_level(next_time) {
+            *level
+        } else if next_time == Time::get_day_end() {
+            0
+        } else {
+            return Err(PyValueError::new_err(
+                "Time out of range for battery charge level FIXME",
+            ));
+        };
+
+        let delta_charge = next_level - curr_level;
+        Ok(Watt::from_milli_watt_hour_per_timestep(delta_charge as f64))
     }
     fn get_id(&self) -> u32 {
         self.inner.get_battery().get_id()
@@ -313,9 +360,9 @@ impl AssignedBattery {
 }
 #[pyclass(unsendable)]
 struct OptimizerContext {
-    electricity_price: Prognoses<i32>,
-    generated_electricity: Prognoses<i32>,
-    beyond_control_consumption: Prognoses<i32>,
+    electricity_price: Prognoses<i64>,
+    generated_electricity: Prognoses<i64>,
+    beyond_control_consumption: Prognoses<i64>,
     batteries: Vec<Rc<RustBattery>>,
     constant_actions: Vec<Rc<RustConstantAction>>,
     variable_actions: Vec<Rc<RustVariableAction>>,
@@ -330,7 +377,12 @@ impl OptimizerContext {
         time: DateTime<Utc>,
         electricity_price: &PrognosesProvider,
     ) -> Result<Self, PyErr> {
-        let electricity_price = electricity_price.get_prognoses::<i32>(py, time)?;
+        let electricity_price = electricity_price.get_prognoses::<EuroPerWh>(py, time)?;
+        let electricity_price = Prognoses::from_closure(|t: Time| {
+            let price = electricity_price.get(t).expect("Electricity price missing");
+            // convert to i64 in micro Euro per Wh
+            price.to_micro_euro_per_wh() as i64
+        });
         let generated_electricity = Prognoses::from_closure(|_| 0);
         let beyond_control_consumption = Prognoses::from_closure(|_| 0);
         let batteries = vec![];
@@ -398,7 +450,7 @@ impl OptimizerContext {
         py: Python<'py>,
         provider: &PrognosesProvider,
     ) -> PyResult<()> {
-        self.generated_electricity += provider.get_prognoses::<i32>(py, self.start_time)?;
+        self.generated_electricity += provider.get_prognoses::<i64>(py, self.start_time)?;
         Ok(())
     }
 }
@@ -469,12 +521,12 @@ impl Schedule {
 fn run_simulated_annealing(
     py: Python<'_>,
     context: &OptimizerContext,
-) -> PyResult<(i64, Schedule)> {
+) -> PyResult<(Euro, Schedule)> {
     let rust_context = context.to_rust();
     let (cost, rust_schedule) =
         electricity_price_optimizer::simulated_annealing::run_simulated_annealing(rust_context);
     Ok((
-        cost,
+        Euro::from_nano_euro(cost as f64),
         Schedule {
             inner: rust_schedule,
             start_timestamp: context.start_time,
@@ -484,6 +536,8 @@ fn run_simulated_annealing(
 
 #[pymodule]
 fn electricity_price_optimizer_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    // Register units submodule
+    register_units_submodule(m)?;
     // Register classes
     m.add_class::<PrognosesProvider>()?;
     m.add_class::<ConstantAction>()?;

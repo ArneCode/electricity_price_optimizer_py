@@ -69,7 +69,7 @@ impl<T: Debug + Clone + Default> Prognoses<T> {
     }
 }
 
-impl<T: From<i32> + Add<T, Output = T> + Clone> Prognoses<T> {
+impl<T: From<i64> + Add<T, Output = T> + Clone> Prognoses<T> {
     /// Adds the consumption of a constant action to the prognoses data.
     /// Used to update consumption prognoses when scheduling constant actions.
     ///

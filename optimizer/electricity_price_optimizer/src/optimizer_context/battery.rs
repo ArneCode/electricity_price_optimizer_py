@@ -6,13 +6,13 @@ use crate::{optimizer_context::prognoses::Prognoses, time::Time};
 #[derive(Debug, Clone)]
 pub struct Battery {
     /// The maximum capacity of the battery.
-    capacity: i32,
+    capacity: i64,
     /// The initial charge level of the battery.
-    initial_level: i32,
+    initial_level: i64,
     /// The maximum rate at which the battery can be charged.
-    maximum_charge_rate: i32,
+    maximum_charge_rate: i64,
     /// The maximum rate at which the battery can output energy.
-    maximum_output_rate: i32,
+    maximum_output_rate: i64,
     efficiency: f32,
     /// Unique identifier for the battery. Used to distinguish between multiple batteries.
     id: u32,
@@ -34,10 +34,10 @@ impl Battery {
     ///
     /// A new Battery instance.
     pub fn new(
-        capacity: i32,
-        initial_level: i32,
-        maximum_charge_rate: i32,
-        maximum_output_rate: i32,
+        capacity: i64,
+        initial_level: i64,
+        maximum_charge_rate: i64,
+        maximum_output_rate: i64,
         efficiency: f32,
         id: u32,
     ) -> Self {
@@ -59,19 +59,19 @@ impl Battery {
         self.id
     }
     /// Returns the maximum charge rate of the battery.
-    pub fn get_max_charge(&self) -> i32 {
+    pub fn get_max_charge(&self) -> i64 {
         return self.maximum_charge_rate;
     }
     /// Returns the maximum output rate of the battery.
-    pub fn get_max_output(&self) -> i32 {
+    pub fn get_max_output(&self) -> i64 {
         return self.maximum_output_rate;
     }
     /// Returns the capacity of the battery.
-    pub fn get_capacity(&self) -> i32 {
+    pub fn get_capacity(&self) -> i64 {
         return self.capacity;
     }
     /// Returns the initial charge level of the battery.
-    pub fn get_initial_level(&self) -> i32 {
+    pub fn get_initial_level(&self) -> i64 {
         return self.initial_level;
     }
 }
@@ -79,11 +79,11 @@ impl Battery {
 #[derive(Clone, Debug)]
 pub struct AssignedBattery {
     battery: Rc<Battery>,
-    charge_level: Prognoses<u32>,
+    charge_level: Prognoses<i64>,
 }
 
 impl AssignedBattery {
-    pub fn new(battery: Rc<Battery>, charge_level: Prognoses<u32>) -> Self {
+    pub fn new(battery: Rc<Battery>, charge_level: Prognoses<i64>) -> Self {
         Self {
             battery,
             charge_level,
@@ -94,7 +94,7 @@ impl AssignedBattery {
         &self.battery
     }
 
-    pub fn get_charge_level(&self, time: Time) -> Option<&u32> {
+    pub fn get_charge_level(&self, time: Time) -> Option<&i64> {
         self.charge_level.get(time)
     }
 }

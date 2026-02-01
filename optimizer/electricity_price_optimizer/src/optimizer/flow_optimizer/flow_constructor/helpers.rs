@@ -19,13 +19,13 @@ pub fn calculate_total_flow(context: &OptimizerContext) -> i64 {
         .get_data()
         .iter()
         .to_owned()
-        .sum::<i32>() as i64;
+        .sum::<i64>() as i64;
     println!("total should be: {}", total);
     return total;
 }
 
 pub fn add_variable_capacity(
-    item_id: i32,
+    item_id: i64,
     mf: &mut MinCostFlow,
     variable_map: &VariableMaker,
     cap: i64,

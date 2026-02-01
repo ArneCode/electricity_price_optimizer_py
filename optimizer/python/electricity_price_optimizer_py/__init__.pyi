@@ -1,11 +1,15 @@
 from datetime import datetime, timedelta
 from typing import Callable, Optional, Tuple
+from typing import Generic, TypeVar
+from . import units
+
+T = TypeVar('T')
 
 
-class PrognosesProvider:
+class PrognosesProvider(Generic[T]):
     """Provides prognosis data via a callback function."""
 
-    def __init__(self, get_data: Callable[[datetime, datetime], int]) -> None:
+    def __init__(self, get_data: Callable[[datetime, datetime], T]) -> None:
         """
         Initialize the provider.
 
@@ -21,14 +25,14 @@ class ConstantAction:
     start_from: datetime
     end_before: datetime
     duration: timedelta
-    consumption: int
+    consumption: units.Watt
 
     def __init__(
         self,
         start_from: datetime,
         end_before: datetime,
         duration: timedelta,
-        consumption: int,
+        consumption: units.Watt,
         id: int,
     ) -> None:
         """
@@ -62,15 +66,15 @@ class VariableAction:
     """An action where consumption can be spread flexibly over a time window."""
     start: datetime
     end: datetime
-    total_consumption: int
-    max_consumption: int
+    total_consumption: units.WattHour
+    max_consumption: units.Watt
 
     def __init__(
         self,
         start: datetime,
         end: datetime,
-        total_consumption: int,
-        max_consumption: int,
+        total_consumption: units.WattHour,
+        max_consumption: units.Watt,
         id: int,
     ) -> None:
         """
@@ -87,7 +91,7 @@ class VariableAction:
 class AssignedVariableAction:
     """An instance of a VariableAction with consumption allocated across the schedule."""
 
-    def get_consumption(self, time: datetime) -> int:
+    def get_consumption(self, time: datetime) -> units.Watt:
         """Returns the allocated consumption for the specific timestep."""
         ...
 
@@ -98,17 +102,17 @@ class AssignedVariableAction:
 
 class Battery:
     """Represents a physical battery for energy storage."""
-    capacity: int
-    max_charge_rate: int
-    max_discharge_rate: int
-    initial_charge: int
+    capacity: units.WattHour
+    max_charge_rate: units.Watt
+    max_discharge_rate: units.Watt
+    initial_charge: units.WattHour
 
     def __init__(
         self,
-        capacity: int,
-        max_charge_rate: int,
-        max_discharge_rate: int,
-        initial_charge: int,
+        capacity: units.WattHour,
+        max_charge_rate: units.Watt,
+        max_discharge_rate: units.Watt,
+        initial_charge: units.WattHour,
         id: int,
     ) -> None:
         """
@@ -125,8 +129,12 @@ class Battery:
 class AssignedBattery:
     """A battery's state over the course of a schedule."""
 
-    def get_charge_level(self, time: datetime) -> int:
+    def get_charge_level(self, time: datetime) -> units.WattHour:
         """Returns the battery charge level at the given time."""
+        ...
+
+    def get_charge_speed(self, time: datetime) -> units.Watt:
+        """Returns the battery charge/discharge speed at the given time."""
         ...
 
     def get_id(self) -> int:
@@ -140,7 +148,7 @@ class OptimizerContext:
     def __init__(
         self,
         time: datetime,
-        electricity_price: PrognosesProvider,
+        electricity_price: PrognosesProvider[units.EuroPerWh],
     ) -> None:
         """
         Initialize the context.
@@ -167,7 +175,7 @@ class OptimizerContext:
         """Adds an action already in progress to the fixed consumption base."""
         ...
 
-    def add_generated_electricity_prognoses(self, provider: PrognosesProvider) -> None:
+    def add_generated_electricity_prognoses(self, provider: PrognosesProvider[units.WattHour]) -> None:
         """Adds predicted energy generation (e.g., Solar) to the context."""
         ...
 
@@ -188,7 +196,7 @@ class Schedule:
         ...
 
 
-def run_simulated_annealing(context: OptimizerContext) -> Tuple[int, Schedule]:
+def run_simulated_annealing(context: OptimizerContext) -> Tuple[units.Euro, Schedule]:
     """
     Runs the simulated annealing optimization algorithm.
 

@@ -1,0 +1,309 @@
+use std::ops::{Add, Div, Mul, Sub};
+
+use chrono::TimeDelta;
+use electricity_price_optimizer::time::MINUTES_PER_TIMESTEP;
+use pyo3::{
+    Bound, PyResult, pyclass, pymethods,
+    types::{PyModule, PyModuleMethods},
+};
+const NANOSECONDS_PER_HOUR: f64 = 3_600_000_000_000.0;
+
+#[pyclass]
+#[derive(Clone, Debug, Default)]
+pub struct Watt {
+    pub value: f64,
+}
+#[pymethods]
+impl Watt {
+    #[new]
+    fn new(value: f64) -> Self {
+        Watt { value }
+    }
+
+    // multiply by timedelta to get WattHour
+    fn __mul__(&self, other: TimeDelta) -> WattHour {
+        // calc in nanos for precision
+        let hours = other.num_nanoseconds().unwrap() as f64 / NANOSECONDS_PER_HOUR;
+        WattHour {
+            value: self.value * hours,
+        }
+    }
+    fn __rmul__(&self, other: TimeDelta) -> WattHour {
+        self.__mul__(other)
+    }
+
+    fn __add__(&self, other: &Watt) -> Watt {
+        Watt {
+            value: self.value + other.value,
+        }
+    }
+    fn __sub__(&self, other: &Watt) -> Watt {
+        Watt {
+            value: self.value - other.value,
+        }
+    }
+    fn __repr__(&self) -> String {
+        // format with 2 decimal places
+        format!("{:.2} W", self.value)
+    }
+
+    fn __float__(&self) -> f64 {
+        self.value
+    }
+}
+impl Watt {
+    pub fn to_milli_watt_hour_per_timestep(&self) -> f64 {
+        let timestep_duration = TimeDelta::minutes(MINUTES_PER_TIMESTEP as i64);
+        let wh = self * timestep_duration;
+        wh.to_milli_wh()
+    }
+    pub fn from_milli_watt_hour_per_timestep(value: f64) -> Self {
+        let timestep_duration = TimeDelta::minutes(MINUTES_PER_TIMESTEP as i64);
+        let wh = WattHour::from_milli_wh(value);
+        &wh / timestep_duration
+    }
+}
+impl Add for &Watt {
+    type Output = Watt;
+
+    fn add(self, other: &Watt) -> Watt {
+        self.__add__(other)
+    }
+}
+impl Sub for &Watt {
+    type Output = Watt;
+
+    fn sub(self, other: &Watt) -> Watt {
+        self.__sub__(other)
+    }
+}
+impl Mul<TimeDelta> for &Watt {
+    type Output = WattHour;
+
+    fn mul(self, other: TimeDelta) -> WattHour {
+        self.__mul__(other)
+    }
+}
+
+#[pyclass]
+#[derive(Clone, Debug, Default)]
+pub struct WattHour {
+    pub value: f64,
+}
+#[pymethods]
+impl WattHour {
+    #[new]
+    fn new(value: f64) -> Self {
+        WattHour { value }
+    }
+
+    fn __truediv__(&self, other: TimeDelta) -> Watt {
+        // calc in nanos for precision
+        let hours = other.num_nanoseconds().unwrap() as f64 / NANOSECONDS_PER_HOUR;
+        Watt {
+            value: self.value / hours,
+        }
+    }
+
+    fn __mul__(&self, other: &EuroPerWh) -> Euro {
+        Euro {
+            value: self.value * other.value,
+        }
+    }
+
+    fn __add__(&self, other: &WattHour) -> WattHour {
+        WattHour {
+            value: self.value + other.value,
+        }
+    }
+    fn __sub__(&self, other: &WattHour) -> WattHour {
+        WattHour {
+            value: self.value - other.value,
+        }
+    }
+    fn __repr__(&self) -> String {
+        // format with 2 decimal places
+        format!("{:.2} Wh", self.value)
+    }
+
+    fn __float__(&self) -> f64 {
+        self.value
+    }
+}
+impl WattHour {
+    pub fn to_milli_wh(&self) -> f64 {
+        self.value * 1_000.0
+    }
+    pub fn from_milli_wh(value: f64) -> Self {
+        WattHour::new(value / 1_000.0)
+    }
+}
+impl Div<TimeDelta> for &WattHour {
+    type Output = Watt;
+
+    fn div(self, other: TimeDelta) -> Watt {
+        self.__truediv__(other)
+    }
+}
+impl Add for &WattHour {
+    type Output = WattHour;
+
+    fn add(self, other: &WattHour) -> WattHour {
+        self.__add__(other)
+    }
+}
+impl Sub for &WattHour {
+    type Output = WattHour;
+
+    fn sub(self, other: &WattHour) -> WattHour {
+        self.__sub__(other)
+    }
+}
+impl Mul<&EuroPerWh> for &WattHour {
+    type Output = Euro;
+
+    fn mul(self, other: &EuroPerWh) -> Euro {
+        self.__mul__(other)
+    }
+}
+#[pyclass]
+#[derive(Clone, Debug, Default)]
+pub struct Euro {
+    pub value: f64,
+}
+#[pymethods]
+impl Euro {
+    #[new]
+    fn new(value: f64) -> Self {
+        Euro { value }
+    }
+
+    fn __truediv__(&self, other: &WattHour) -> EuroPerWh {
+        EuroPerWh {
+            value: self.value / other.value,
+        }
+    }
+
+    fn __add__(&self, other: &Euro) -> Euro {
+        Euro {
+            value: self.value + other.value,
+        }
+    }
+    fn __sub__(&self, other: &Euro) -> Euro {
+        Euro {
+            value: self.value - other.value,
+        }
+    }
+    fn __repr__(&self) -> String {
+        // format with 2 decimal places
+        format!("{:.2} €", self.value)
+    }
+
+    fn __float__(&self) -> f64 {
+        self.value
+    }
+}
+impl Euro {
+    pub fn from_nano_euro(value: f64) -> Self {
+        Euro::new(value / 1_000_000_000.0)
+    }
+    pub fn to_nano_euro(&self) -> f64 {
+        self.value * 1_000_000_000.0
+    }
+}
+impl Div<&WattHour> for &Euro {
+    type Output = EuroPerWh;
+
+    fn div(self, other: &WattHour) -> EuroPerWh {
+        self.__truediv__(other)
+    }
+}
+impl Add for &Euro {
+    type Output = Euro;
+
+    fn add(self, other: &Euro) -> Euro {
+        self.__add__(other)
+    }
+}
+impl Sub for &Euro {
+    type Output = Euro;
+
+    fn sub(self, other: &Euro) -> Euro {
+        self.__sub__(other)
+    }
+}
+#[pyclass]
+#[derive(Clone, Debug, Default)]
+pub struct EuroPerWh {
+    pub value: f64,
+}
+#[pymethods]
+impl EuroPerWh {
+    #[new]
+    fn new(value: f64) -> Self {
+        EuroPerWh { value }
+    }
+
+    fn __mul__(&self, other: &WattHour) -> Euro {
+        Euro {
+            value: self.value * other.value,
+        }
+    }
+
+    fn __add__(&self, other: &EuroPerWh) -> EuroPerWh {
+        EuroPerWh {
+            value: self.value + other.value,
+        }
+    }
+    fn __sub__(&self, other: &EuroPerWh) -> EuroPerWh {
+        EuroPerWh {
+            value: self.value - other.value,
+        }
+    }
+    fn __repr__(&self) -> String {
+        // format with 6 decimal places
+        format!("{:.6} €/Wh", self.value)
+    }
+    fn __float__(&self) -> f64 {
+        self.value
+    }
+}
+impl EuroPerWh {
+    pub fn to_micro_euro_per_wh(&self) -> f64 {
+        self.value * 1_000_000.0
+    }
+}
+impl Mul<&WattHour> for &EuroPerWh {
+    type Output = Euro;
+
+    fn mul(self, other: &WattHour) -> Euro {
+        self.__mul__(other)
+    }
+}
+impl Add for &EuroPerWh {
+    type Output = EuroPerWh;
+
+    fn add(self, other: &EuroPerWh) -> EuroPerWh {
+        self.__add__(other)
+    }
+}
+impl Sub for &EuroPerWh {
+    type Output = EuroPerWh;
+
+    fn sub(self, other: &EuroPerWh) -> EuroPerWh {
+        self.__sub__(other)
+    }
+}
+pub fn register_units_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
+    let units_mod = PyModule::new(parent_module.py(), "units")?;
+
+    // Add the unit classes to the submodule
+    units_mod.add_class::<Watt>()?;
+    units_mod.add_class::<WattHour>()?;
+    units_mod.add_class::<Euro>()?;
+    units_mod.add_class::<EuroPerWh>()?;
+
+    // Add the submodule to the parent
+    parent_module.add_submodule(&units_mod)?;
+    Ok(())
+}

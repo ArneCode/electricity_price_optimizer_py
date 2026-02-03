@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from database import engine, init_db
 from device import *
+from electricity_price_optimizer_py import OptimizerContext, run_simulated_annealing
 
 init_db()
 

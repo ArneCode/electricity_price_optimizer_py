@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Callable, Optional, Tuple
 from typing import Generic, TypeVar
-from . import units
+from . import units as units
 
 T = TypeVar('T')
 

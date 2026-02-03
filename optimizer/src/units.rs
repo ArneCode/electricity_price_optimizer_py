@@ -50,6 +50,12 @@ impl Watt {
     fn __float__(&self) -> f64 {
         self.value
     }
+    fn __eq__(&self, other: &Watt) -> bool {
+        self.value == other.value
+    }
+    fn __lt__(&self, other: &Watt) -> bool {
+        self.value < other.value
+    }
 }
 impl Watt {
     pub fn to_milli_watt_hour_per_timestep(&self) -> f64 {
@@ -129,6 +135,12 @@ impl WattHour {
     fn __float__(&self) -> f64 {
         self.value
     }
+    fn __eq__(&self, other: &WattHour) -> bool {
+        self.value == other.value
+    }
+    fn __lt__(&self, other: &WattHour) -> bool {
+        self.value < other.value
+    }
 }
 impl WattHour {
     pub fn to_milli_wh(&self) -> f64 {
@@ -202,6 +214,12 @@ impl Euro {
     fn __float__(&self) -> f64 {
         self.value
     }
+    fn __eq__(&self, other: &Euro) -> bool {
+        self.value == other.value
+    }
+    fn __lt__(&self, other: &Euro) -> bool {
+        self.value < other.value
+    }
 }
 impl Euro {
     pub fn from_nano_euro(value: f64) -> Self {
@@ -266,6 +284,12 @@ impl EuroPerWh {
     }
     fn __float__(&self) -> f64 {
         self.value
+    }
+    fn __eq__(&self, other: &EuroPerWh) -> bool {
+        self.value == other.value
+    }
+    fn __lt__(&self, other: &EuroPerWh) -> bool {
+        self.value < other.value
     }
 }
 impl EuroPerWh {

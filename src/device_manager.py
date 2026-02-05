@@ -1,23 +1,27 @@
 from abc import ABC, abstractmethod
-from device import Device
-from services.controller_service import IControllerService
-from services.interactor_service import IInteractorService
+from device import Battery, VariableActionDevice, Generator, ConstantActionDevice
+from services.controller_service import IControllerServiceReader
+from services.interactor_service import IInteractorServiceReader
 from uow import IUnitOfWork
 
 
 class IDeviceManager(ABC):
-    interactor_service: IInteractorService
-    controller_service: IControllerService
-    uow: IUnitOfWork
-
     @abstractmethod
-    def get_device(self, device_id: int) -> Device | None:
-        """Retrieve device details by ID."""
+    def add_battery(self, device: Battery) -> int:
+        """Add a new battery device and return its ID."""
         ...
 
     @abstractmethod
-    def add_device(self, device: Device) -> int:
-        """Add a new device and return its ID."""
+    def add_generator(self, device: Generator) -> int:
+        """Add a new generator device and return its ID."""
+        ...
+
+    def add_constant_action_device(self, device: ConstantActionDevice) -> int:
+        """Add a new constant action device and return its ID."""
+        ...
+
+    def add_variable_action_device(self, device: VariableActionDevice) -> int:
+        """Add a new variable action device and return its ID."""
         ...
 
     @abstractmethod
@@ -25,27 +29,60 @@ class IDeviceManager(ABC):
         """Remove a device by ID."""
         ...
 
+    @abstractmethod
+    def get_interactor_service(self) -> IInteractorServiceReader:
+        """Get the interactor service."""
+        ...
+
+    @abstractmethod
+    def get_controller_service(self) -> IControllerServiceReader:
+        """Get the controller service."""
+        ...
+
 
 class DeviceManager(IDeviceManager):
-    def __init__(self,
-                 interactor_service: IInteractorService,
-                 controller_service: IControllerService,
-                 uow: IUnitOfWork):
-        self.interactor_service = interactor_service
-        self.controller_service = controller_service
-        self.uow = uow
+    def __init__(self, uow: IUnitOfWork):
+        self._uow = uow
 
-    def get_device(self, device_id: int) -> Device | None:
-        return self.uow.devices.get_device(device_id)
+    def add_battery(self, device: Battery) -> int:
+        id = self._uow.device_service.add_device(device)
+        self._uow.interactor_service.add_battery_interactor(
+            device.to_battery_interactor())
+        self._uow.controller_service.add_battery_controller(
+            device.to_battery_controller())
+        return id
 
-    def add_device(self, device: Device) -> int:
-        id = self.uow.devices.add_device(device)
-        # TODO: pass actual interactor and controller objects
-        self.interactor_service.add_interactor(...)
-        self.controller_service.add_controller(...)
+    def add_generator(self, device: Generator) -> int:
+        id = self._uow.device_service.add_device(device)
+        self._uow.interactor_service.add_generator_interactor(
+            device.to_generator_interactor())
+        self._uow.controller_service.add_generator_controller(
+            device.to_generator_controller())
+        return id
+
+    def add_constant_action_device(self, device: ConstantActionDevice) -> int:
+        id = self._uow.device_service.add_device(device)
+        self._uow.interactor_service.add_constant_action_interactor(
+            device.to_constant_action_interactor())
+        self._uow.controller_service.add_constant_action_controller(
+            device.to_constant_action_controller())
+        return id
+
+    def add_variable_action_device(self, device: VariableActionDevice) -> int:
+        id = self._uow.device_service.add_device(device)
+        self._uow.interactor_service.add_variable_action_interactor(
+            device.to_variable_action_interactor())
+        self._uow.controller_service.add_variable_action_controller(
+            device.to_variable_action_controller())
         return id
 
     def remove_device(self, device_id: int) -> None:
-        self.uow.devices.remove_device(device_id)
-        self.interactor_service.remove_interactor(device_id)
-        self.controller_service.remove_controller(device_id)
+        self._uow.device_service.remove_device(device_id)
+        self._uow.interactor_service.remove_interactor(device_id)
+        self._uow.controller_service.remove_controller(device_id)
+
+    def get_interactor_service(self) -> IInteractorServiceReader:
+        return self._uow.interactor_service
+
+    def get_controller_service(self) -> IControllerServiceReader:
+        return self._uow.controller_service

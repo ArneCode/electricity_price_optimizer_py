@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from device import Battery, VariableActionDevice, Generator, ConstantActionDevice
 from services.controller_service import IControllerServiceReader
+from services.device_service import IDeviceServiceReader
 from services.interactor_service import IInteractorServiceReader
 from uow import IUnitOfWork
 
@@ -27,6 +28,11 @@ class IDeviceManager(ABC):
     @abstractmethod
     def remove_device(self, device_id: int) -> None:
         """Remove a device by ID."""
+        ...
+
+    @abstractmethod
+    def get_device_service(self) -> IDeviceServiceReader:
+        """Get the device service."""
         ...
 
     @abstractmethod
@@ -80,6 +86,9 @@ class DeviceManager(IDeviceManager):
         self._uow.device_service.remove_device(device_id)
         self._uow.interactor_service.remove_interactor(device_id)
         self._uow.controller_service.remove_controller(device_id)
+
+    def get_device_service(self) -> IDeviceServiceReader:
+        return self._uow.device_service
 
     def get_interactor_service(self) -> IInteractorServiceReader:
         return self._uow.interactor_service

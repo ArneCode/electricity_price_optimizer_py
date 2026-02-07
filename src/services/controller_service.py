@@ -1,3 +1,12 @@
+"""Controller service layer.
+
+Manages controller instances in memory with transactional staging (RollbackMap).
+Provides add/remove and lookup operations per controller type.
+
+Caveats:
+- Not suitable for multiprocessing due to shared state.
+- Use a concurrency-safe or persistent approach in production.
+"""
 from abc import ABC, abstractmethod
 from typing import Optional
 from controllers import BatteryController, GeneratorController, ConstantActionController, VariableActionController
@@ -5,6 +14,7 @@ from uow.rollback_map import RollbackMap
 
 
 class IControllerServiceReader(ABC):
+    """Read-only controller service API."""
     @abstractmethod
     def get_battery_controller(self, controller_id: int) -> Optional[BatteryController]:
         """Retrieve battery controller details by ID."""
@@ -27,6 +37,7 @@ class IControllerServiceReader(ABC):
 
 
 class IControllerService(ABC):
+    """Controller service API with mutation operations."""
     @abstractmethod
     def add_battery_controller(self, controller: BatteryController) -> int:
         """Add a new battery controller and return its ID."""
@@ -66,6 +77,7 @@ class IControllerService(ABC):
 
 
 class ControllerService(IControllerService):
+    """In-memory controller store using RollbackMap for transactional changes."""
     battery_controllers: RollbackMap[BatteryController]
     generator_controllers: RollbackMap[GeneratorController]
     constant_action_controllers: RollbackMap[ConstantActionController]
@@ -90,22 +102,22 @@ class ControllerService(IControllerService):
         return self.variable_action_controllers.get(controller_id)
 
     def add_battery_controller(self, controller: BatteryController) -> int:
-        return self.battery_controllers.add(controller)
+        return self.battery_controllers.set(controller.device_id, controller)
 
     def add_generator_controller(self, controller: GeneratorController) -> int:
-        return self.generator_controllers.add(controller)
+        return self.generator_controllers.set(controller.device_id, controller)
 
     def add_constant_action_controller(self, controller: ConstantActionController) -> int:
-        return self.constant_action_controllers.add(controller)
+        return self.constant_action_controllers.set(controller.device_id, controller)
 
     def add_variable_action_controller(self, controller: VariableActionController) -> int:
-        return self.variable_action_controllers.add(controller)
+        return self.variable_action_controllers.set(controller.device_id, controller)
 
     def remove_controller(self, controller_id: int) -> None:
-        self.battery_controllers.remove(controller_id)
-        self.generator_controllers.remove(controller_id)
-        self.constant_action_controllers.remove(controller_id)
-        self.variable_action_controllers.remove(controller_id)
+        self.battery_controllers.delete(controller_id)
+        self.generator_controllers.delete(controller_id)
+        self.constant_action_controllers.delete(controller_id)
+        self.variable_action_controllers.delete(controller_id)
 
     def rollback(self) -> None:
         self.battery_controllers.rollback()

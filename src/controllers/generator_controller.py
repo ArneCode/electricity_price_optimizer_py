@@ -1,8 +1,7 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 
 from .base import DeviceController
-from interactors import GeneratorInteractor
 
 from electricity_price_optimizer_py import (
     Schedule,
@@ -10,93 +9,71 @@ from electricity_price_optimizer_py import (
     Prognoses
 )
 
+from device_manager import IDeviceManager
+
 
 class GeneratorController(DeviceController):
+    """Controller for generator devices (e.g., PV panels).
+
+    Generators are passive: they don't receive commands but their
+    prognoses/current output is added to the optimizer context.
     """
-    Controller for generator devices (e.g., PV panels).
-    
-    Generators are not directly controlled but their output is
-    read and used in optimization.
-    """
-    
-    def __init__(self, generator: Generator, interactor: GeneratorInteractor):
-        """
-        Initialize the generator controller.
-        
-        Args:
-            generator: The generator device model
-            interactor: The interactor for device communication (injected)
-        """
-        self._generator = generator
-        self._interactor = interactor
+
+    def __init__(self, device_id: int):
+        self._device_id = device_id
         self._schedule: Optional[Schedule] = None
-    
+        self._generation_prognosis: Optional[Prognoses] = None
+
     @property
-    def device_id(self) -> str:
-        return self._generator.id
-    
-    @property
-    def device_name(self) -> str:
-        return self._generator.name
-    
-    @property
-    def generator(self) -> Generator:
-        """Get the generator model."""
-        return self._generator
-    
-    def set_generation_prognosis(self, prognosis: Prognoses) -> None:
-        """
-        Set the generation prognosis from weather data.
-        
-        This is typically called by the DeviceManager after
-        fetching weather data from the Weather API.
-        """
-        self._generation_prognosis = prognosis
-    
-    def use_schedule(self, schedule: Schedule) -> None:
-        """Store the schedule (generators don't actively use it)."""
+    def device_id(self) -> int:
+        return self._device_id
+
+    def use_schedule(self, schedule: Schedule, device_manager: IDeviceManager) -> None:
+        """Store the schedule (generators typically don't act on it)."""
         self._schedule = schedule
-    
-    def add_to_optimizer_context(self, context: OptimizerContext) -> None:
+
+    def set_generation_prognosis(self, prognosis: Prognoses, device_manager: IDeviceManager) -> None:
+        """Store the generation prognosis for later addition to optimizer context."""
+        self._generation_prognosis = prognosis
+
+    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime, device_manager: IDeviceManager) -> None:
+        """Add generator output (prognosis) into the optimizer context.
+
+        This will sum this generator's prognosis into context.generated_electricity.
         """
-        Add generator information to the optimizer context.
-        
-        Adds the generation prognosis to the context's generated electricity.
-        """
-        if self._generation_prognosis is not None:
-            # Combine with existing generation prognosis
-            if context.generated_electricity is not None:
-                # Add this generator's output to the total
-                for i in range(len(context.generated_electricity.values)):
-                    if i < len(self._generation_prognosis.values):
-                        context.generated_electricity.values[i] += self._generation_prognosis.values[i]
-            else:
-                context.generated_electricity = self._generation_prognosis
-    
-    def update_device(self) -> None:
-        """
-        Update device state.
-        
-        Generators don't need active control, but we can read
-        their current output for monitoring.
-        """
-        # Generators are passive - nothing to update
-        pass
-    
-    def get_current_state(self) -> dict:
-        """Get the current state of the generator."""
-        return {
-            "id": self._generator.id,
-            "name": self._generator.name,
-            "type": "generator",
-            "current_output": self._interactor.get_current(),
-            "max_power": self._generator.max_power,
-            "location": {
-                "latitude": self._generator.latitude,
-                "longitude": self._generator.longitude,
-            },
-        }
-    
-    def update_generator_model(self, generator: Generator) -> None:
-        """Update the generator model with new parameters."""
-        self._generator = generator
+        if self._generation_prognosis is None:
+            # Try to read a current value from interactor and add as a single-point prognosis
+            interactor = device_manager.get_interactor_service().get_generator_interactor(self._device_id)
+            if interactor is None:
+                return
+            current = interactor.get_current(device_manager)
+            # create a very small Prognoses-like object if available else skip
+            try:
+                # try to append into context if the structure exists
+                if context.generated_electricity is None:
+                    context.generated_electricity = self._generation_prognosis
+            except Exception:
+                pass
+            return
+
+        # Combine with existing generation prognosis
+        if context.generated_electricity is not None:
+            for i in range(len(context.generated_electricity.values)):
+                if i < len(self._generation_prognosis.values):
+                    context.generated_electricity.values[i] += self._generation_prognosis.values[i]
+        else:
+            context.generated_electricity = self._generation_prognosis
+
+    def update_device(self, current_time: datetime, device_manager: IDeviceManager) -> None:
+        """Optional periodic update; for generators we generally don't actuate devices."""
+        # Could poll interactor to advance simulated state if it exposes update()
+        interactor = device_manager.get_interactor_service().get_generator_interactor(self._device_id)
+        if interactor is None:
+            return
+        # Some mock interactors implement update(current_time, device_manager)
+        try:
+            interactor.update(current_time, device_manager)
+        except Exception:
+            # Not all interactors implement update; ignore quietly
+            pass
+

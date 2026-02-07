@@ -31,7 +31,7 @@ class VariableActionController(DeviceController):
     def device_id(self) -> int:
         return self._device_id
     
-    def use_schedule(self, schedule: Schedule) -> None:
+    def use_schedule(self, schedule: Schedule, device_manager: IDeviceManager) -> None:
         """Store the schedule for later use."""
         self._schedule = schedule
     

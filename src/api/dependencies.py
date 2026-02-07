@@ -11,7 +11,8 @@ from database import SessionLocal
 from collections.abc import Generator
 from services.controller_service import IControllerService
 from services.interactor_service import IInteractorService
-from instances import controller_service_instance, interactor_service_instance
+from services.orchestrator_service import IOrchestratorService
+from instances import controller_service_instance, interactor_service_instance, orchestrator_service_instance
 from device_manager import IDeviceManager, DeviceManager
 
 
@@ -46,7 +47,13 @@ def get_interactor_service() -> IInteractorService:
     return interactor_service_instance
 
 
+def get_orchestrator_service() -> IOrchestratorService:
+    """Return the application-scoped orchestrator service singleton."""
+    return orchestrator_service_instance
+
 # device manager depends on interactor, controller, and unit of work
+
+
 def get_device_manager(
     interactor_service: IInteractorService = Depends(get_interactor_service),
     controller_service: IControllerService = Depends(get_controller_service),

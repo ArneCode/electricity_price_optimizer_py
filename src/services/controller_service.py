@@ -10,6 +10,7 @@ Caveats:
 from abc import ABC, abstractmethod
 from typing import Optional
 from controllers import BatteryController, GeneratorController, ConstantActionController, VariableActionController
+from controllers.base import DeviceController
 from uow.rollback_map import RollbackMap
 
 
@@ -33,6 +34,11 @@ class IControllerServiceReader(ABC):
     @abstractmethod
     def get_variable_action_controller(self, controller_id: int) -> Optional[VariableActionController]:
         """Retrieve variable action controller details by ID."""
+        ...
+
+    @abstractmethod
+    def get_all_controllers(self) -> list[DeviceController]:
+        """Retrieve all controllers."""
         ...
 
 
@@ -97,6 +103,12 @@ class ControllerService(IControllerService):
 
     def get_constant_action_controller(self, controller_id: int) -> Optional[ConstantActionController]:
         return self.constant_action_controllers.get(controller_id)
+
+    def get_all_controllers(self) -> list[DeviceController]:
+        return list(self.battery_controllers.values()) + \
+            list(self.generator_controllers.values()) + \
+            list(self.constant_action_controllers.values()) + \
+            list(self.variable_action_controllers.values())
 
     def get_variable_action_controller(self, controller_id: int) -> Optional[VariableActionController]:
         return self.variable_action_controllers.get(controller_id)

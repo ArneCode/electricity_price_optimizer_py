@@ -55,6 +55,20 @@ class RollbackMap(Generic[T]):
         if key in self._committed_state:
             self._staged_deletions.add(key)
 
+    def values(self) -> list[T]:
+        """O(N) where N is the number of committed keys: Returns merged view of committed and staged values."""
+        # Start with committed values
+        current = self._committed_state.copy()
+
+        # Apply staged changes
+        current.update(self._staged_changes)
+
+        # Remove staged deletions
+        for k in self._staged_deletions:
+            current.pop(k, None)
+
+        return list(current.values())
+
     def commit(self) -> None:
         """O(K) where K is the number of staged changes since last commit."""
         # Apply additions/updates

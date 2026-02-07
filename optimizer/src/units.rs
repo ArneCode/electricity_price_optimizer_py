@@ -193,6 +193,15 @@ impl Div<TimeDelta> for &WattHour {
         }
     }
 }
+impl Div<Watt> for &WattHour {
+    type Output = TimeDelta;
+
+    fn div(self, other: Watt) -> TimeDelta {
+        let hours = self.value / other.value;
+        let nanos = (hours * NANOSECONDS_PER_HOUR) as i64;
+        TimeDelta::nanoseconds(nanos)
+    }
+}
 impl Div<&WattHour> for &WattHour {
     type Output = f64;
 
@@ -279,6 +288,10 @@ impl WattHour {
             }
             UnitOrTimeOrFloat::TimeDelta(td) => {
                 let result = self / td;
+                Ok(result.into_bound_py_any(py)?)
+            }
+            UnitOrTimeOrFloat::Watt(w) => {
+                let result = self / w;
                 Ok(result.into_bound_py_any(py)?)
             }
             UnitOrTimeOrFloat::WattHour(wh) => {

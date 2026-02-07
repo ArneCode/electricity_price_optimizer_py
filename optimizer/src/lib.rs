@@ -543,7 +543,10 @@ impl OptimizerContext {
         py: Python<'py>,
         provider: &PrognosesProvider,
     ) -> PyResult<()> {
-        self.generated_electricity += provider.get_prognoses::<i64>(py, self.start_time)?;
+        let prognoses = provider.get_prognoses::<WattHour>(py, self.start_time)?;
+        self.generated_electricity += Prognoses::from_closure(|t| -> i64 {
+            prognoses.get(t).expect("internal error").to_milli_wh() as i64
+        });
         Ok(())
     }
 }

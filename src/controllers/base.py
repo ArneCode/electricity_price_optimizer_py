@@ -10,6 +10,8 @@ from electricity_price_optimizer_py import (
     OptimizerContext,
 )
 
+from device_manager import IDeviceManager
+
 class DeviceController(ABC):
     """
     Abstract base class for device controllers.
@@ -20,18 +22,18 @@ class DeviceController(ABC):
     
     @property
     @abstractmethod
-    def device_id(self) -> int:
+    def device_id(self, device_manager: IDeviceManager) -> int:
         """Get the ID of the controlled device."""
         pass
     
     @property
     @abstractmethod
-    def device_name(self) -> str:
+    def device_name(self, device_manager: IDeviceManager) -> str:
         """Get the name of the controlled device."""
         pass
     
     @abstractmethod
-    def use_schedule(self, schedule: Schedule) -> None:
+    def use_schedule(self, schedule: Schedule, device_manager: IDeviceManager) -> None:
         """
         Inform the controller about the schedule to use.
         
@@ -44,7 +46,7 @@ class DeviceController(ABC):
         pass
     
     @abstractmethod
-    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime = None) -> None:
+    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime, device_manager: IDeviceManager) -> None:
         """
         Add device information to the optimizer context.
         
@@ -58,7 +60,7 @@ class DeviceController(ABC):
         pass
     
     @abstractmethod
-    def update_device(self, current_time: datetime) -> None:
+    def update_device(self, current_time: datetime, device_manager: IDeviceManager) -> None:
         """
         Update the physical device based on the current schedule.
         
@@ -69,7 +71,7 @@ class DeviceController(ABC):
         pass
     
     @abstractmethod
-    def get_current_state(self) -> dict:
+    def get_current_state(self, device_manager: IDeviceManager) -> dict:
         """
         Get the current state of the device.
         

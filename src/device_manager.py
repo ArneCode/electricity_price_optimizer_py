@@ -1,3 +1,8 @@
+"""Device manager coordinating services via Unit of Work.
+
+Handles creation/removal of devices and attaches corresponding interactors/controllers.
+All operations occur within the provided Unit of Work context.
+"""
 from abc import ABC, abstractmethod
 from device import Battery, VariableActionDevice, Generator, ConstantActionDevice
 from services.controller_service import IControllerServiceReader
@@ -7,6 +12,8 @@ from uow import IUnitOfWork
 
 
 class IDeviceManager(ABC):
+    """Device manager interface exposing device operations and service accessors."""
+
     @abstractmethod
     def add_battery(self, device: Battery) -> int:
         """Add a new battery device and return its ID."""
@@ -47,6 +54,8 @@ class IDeviceManager(ABC):
 
 
 class DeviceManager(IDeviceManager):
+    """Default device manager implementation using an injected Unit of Work."""
+
     def __init__(self, uow: IUnitOfWork):
         self._uow = uow
 

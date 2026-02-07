@@ -1,3 +1,12 @@
+"""Device service layer (SQLAlchemy-backed).
+
+Provides read/write access to Device and specialized tables (Battery, Generator,
+ConstantActionDevice, VariableActionDevice) via an injected SQLAlchemy Session.
+
+Notes:
+- add_device flushes the session to ensure an auto-generated ID is available.
+- remove_device stages deletion; commit outside to persist.
+"""
 from abc import ABC, abstractmethod
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -6,6 +15,7 @@ from device import Device, Battery, Generator, ConstantActionDevice, VariableAct
 
 
 class IDeviceServiceReader(ABC):
+    """Read-only device service API."""
     @abstractmethod
     def get_device(self, device_id: int) -> Device | None:
         """Retrieve device details by ID."""
@@ -84,6 +94,7 @@ class IDeviceServiceReader(ABC):
 
 
 class IDeviceService(ABC, IDeviceServiceReader):
+    """Device service API with mutation operations."""
     @abstractmethod
     def add_device(self, device: Device) -> int:
         """Add a new device and return its ID."""
@@ -96,6 +107,8 @@ class IDeviceService(ABC, IDeviceServiceReader):
 
 
 class SqlAlchemyDeviceService(IDeviceService):
+    """SQLAlchemy-backed implementation of the device service."""
+
     def __init__(self, session: Session):
         self.session = session
 

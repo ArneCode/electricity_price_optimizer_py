@@ -1,3 +1,11 @@
+"""SQLAlchemy models for devices and actions.
+
+Includes:
+- Base Device with polymorphism via DeviceType
+- Battery with capacity and rate constraints
+- ConstantActionDevice and VariableActionDevice with related actions
+- Generator hierarchy (e.g., PV)
+"""
 from datetime import datetime, timedelta
 from sqlalchemy import DateTime, ForeignKey, Interval
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -12,6 +20,7 @@ from database.mapper import WattHourMapper, WattMapper, EuroMapper, EuroPerWhMap
 
 
 class DeviceType(enum.Enum):
+    """Device type discriminator for polymorphic mapping."""
     BATTERY = "BATTERY"
     CONSTANT_ACTION_DEVICE = "CONSTANT_ACTION_DEVICE"
     VARIABLE_ACTION_DEVICE = "VARIABLE_ACTION_DEVICE"
@@ -19,6 +28,7 @@ class DeviceType(enum.Enum):
 
 
 class Device(Base):
+    """Base device model with polymorphic identity."""
     __tablename__ = "device"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -29,6 +39,7 @@ class Device(Base):
 
 
 class Battery(Device):
+    """Battery device with capacity, charge levels, and rate limits."""
     __tablename__ = "battery"
     id: Mapped[int] = mapped_column(ForeignKey(
         "device.id", ondelete="CASCADE"), primary_key=True)
@@ -44,6 +55,7 @@ class Battery(Device):
 
 
 class ConstantActionDevice(Device):
+    """Device holding constant actions as a one-to-many relationship."""
     __tablename__ = "constant_action_device"
 
     id: Mapped[int] = mapped_column(
@@ -65,6 +77,7 @@ class ConstantActionDevice(Device):
 
 
 class ConstantAction(Base):
+    """Constant action definition with time window, duration, and consumption."""
     __tablename__ = "constant_action"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -86,6 +99,7 @@ class ConstantAction(Base):
 
 
 class VariableActionDevice(Device):
+    """Device holding variable actions as a one-to-many relationship."""
     __tablename__ = "variable_action_device"
     id: Mapped[int] = mapped_column(
         ForeignKey("device.id", ondelete="CASCADE"),
@@ -104,6 +118,7 @@ class VariableActionDevice(Device):
 
 
 class VariableAction(Base):
+    """Variable action definition with window, total energy, and per-timestep max."""
     __tablename__ = "variable_action"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -123,6 +138,7 @@ class VariableAction(Base):
 
 
 class Generator(Device):
+    """Abstract base class for generator devices."""
     __abstract__ = True
 
     id: Mapped[int] = mapped_column(
@@ -132,6 +148,7 @@ class Generator(Device):
 
 
 class GeneratorPV(Generator):
+    """Photovoltaic generator device (attributes TBD)."""
     __tablename__ = "generator_pv"
     id: Mapped[int] = mapped_column(
         ForeignKey("device.id", ondelete="CASCADE"),

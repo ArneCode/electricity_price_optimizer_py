@@ -1,37 +1,40 @@
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 from electricity_price_optimizer_py import Schedule, OptimizerContext, PrognosesProvider, run_simulated_annealing
 from electricity_price_optimizer_py.units import EuroPerWh
 from datetime import datetime
-from device_manager import IDeviceManager
+
+if TYPE_CHECKING:
+    from device_manager import IDeviceManager
 
 
 class IOrchestratorService(ABC):
     """Orchestrator service interface providing access to all services."""
 
     @abstractmethod
-    def get_schedule(self) -> Schedule:
+    def get_schedule(self) -> "Schedule":
         """Get the current schedule."""
         ...
 
     @abstractmethod
-    def run_optimization(self, device_manager: IDeviceManager) -> None:
+    def run_optimization(self, device_manager: "IDeviceManager") -> "None":
         """Run the optimization algorithm."""
         ...
 
 
 class OrchestratorService(IOrchestratorService):
-    _schedule: Schedule | None
+    _schedule: "Schedule | None"
 
     def __init__(self):
         self._schedule = None
 
-    def get_schedule(self) -> Schedule:
+    def get_schedule(self) -> "Schedule":
         """Get the current schedule."""
         if self._schedule is None:
             raise ValueError("Schedule has not been generated yet.")
         return self._schedule
 
-    def run_optimization(self, device_manager: IDeviceManager) -> None:
+    def run_optimization(self, device_manager: "IDeviceManager") -> "None":
         """Run the optimization algorithm."""
         now = datetime.now()
 

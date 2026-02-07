@@ -1,15 +1,16 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from .base import DeviceController
 
 from electricity_price_optimizer_py import (
     Schedule,
     OptimizerContext,
-    Prognoses
+    PrognosesProvider
 )
 
-from device_manager import IDeviceManager
+if TYPE_CHECKING:
+    from device_manager import IDeviceManager
 
 
 class GeneratorController(DeviceController):
@@ -19,24 +20,24 @@ class GeneratorController(DeviceController):
     prognoses/current output is added to the optimizer context.
     """
 
-    def __init__(self, id: int):
+    def __init__(self, id: "int"):
         self._id = id
-        self._schedule: Optional[Schedule] = None
-        self._generation_prognosis: Optional[Prognoses] = None
+        self._schedule: "Optional[Schedule]" = None
+        self._generation_prognosis: "Optional[Prognoses]" = None
 
     @property
-    def id(self) -> int:
+    def id(self) -> "int":
         return self._id
 
-    def use_schedule(self, schedule: Schedule, device_manager: IDeviceManager) -> None:
+    def use_schedule(self, schedule: "Schedule", device_manager: "IDeviceManager") -> "None":
         """Store the schedule (generators typically don't act on it)."""
         self._schedule = schedule
 
-    def set_generation_prognosis(self, prognosis: Prognoses, device_manager: IDeviceManager) -> None:
+    def set_generation_prognosis(self, prognosis: "Prognoses", device_manager: "IDeviceManager") -> "None":
         """Store the generation prognosis for later addition to optimizer context."""
         self._generation_prognosis = prognosis
 
-    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime, device_manager: IDeviceManager) -> None:
+    def add_to_optimizer_context(self, context: "OptimizerContext", current_time: "datetime", device_manager: "IDeviceManager") -> "None":
         """Add generator output (prognosis) into the optimizer context.
 
         This will sum this generator's prognosis into context.generated_electricity.
@@ -64,7 +65,7 @@ class GeneratorController(DeviceController):
         else:
             context.generated_electricity = self._generation_prognosis
 
-    def update_device(self, current_time: datetime, device_manager: IDeviceManager) -> None:
+    def update_device(self, current_time: "datetime", device_manager: "IDeviceManager") -> "None":
         """Optional periodic update; for generators we generally don't actuate devices."""
         # Could poll interactor to advance simulated state if it exposes update()
         interactor = device_manager.get_interactor_service().get_generator_interactor(self._id)
@@ -76,4 +77,3 @@ class GeneratorController(DeviceController):
         except Exception:
             # Not all interactors implement update; ignore quietly
             pass
-

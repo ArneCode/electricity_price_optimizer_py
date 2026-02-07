@@ -1,8 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from .base import DeviceController
-from interactors import VariableActionInteractor
 
 from electricity_price_optimizer_py import (
     Schedule,
@@ -11,40 +10,41 @@ from electricity_price_optimizer_py import (
     AssignedVariableAction
 )
 
-from device_manager import IDeviceManager
+if TYPE_CHECKING:
+    from device_manager import IDeviceManager
+
 
 class VariableActionController(DeviceController):
     """
     Controller for variable action devices (e.g., EV charging).
-    
+
     Manages actions with variable power consumption profiles.
     """
-    
-    def __init__(
-            self, 
-            id: int,
-        ):
+
+    def __init__(self, id: "int"):
         self._id = id
-        self._schedule: Optional[Schedule] = None
-    
+        self._schedule: "Optional[Schedule]" = None
+
     @property
-    def id(self) -> int:
+    def id(self) -> "int":
         return self._id
-    
-    def use_schedule(self, schedule: Schedule, device_manager: IDeviceManager) -> None:
+
+    def use_schedule(self, schedule: "Schedule", device_manager: "IDeviceManager") -> "None":
         """Store the schedule for later use."""
         self._schedule = schedule
-    
-    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime, device_manager: IDeviceManager) -> None:
-        action = device_manager.get_device_service().get_variable_action_device(self._id).actions[0]
-        interactor = device_manager.get_interactor_service().get_variable_action_interactor(self._id)
+
+    def add_to_optimizer_context(self, context: "OptimizerContext", current_time: "datetime", device_manager: "IDeviceManager") -> "None":
+        action = device_manager.get_device_service(
+        ).get_variable_action_device(self._id).actions[0]
+        interactor = device_manager.get_interactor_service(
+        ).get_variable_action_interactor(self._id)
 
         if interactor.get_total_consumed() >= action.total_consumption:
-            return # already fully consumed, no need to add to context
+            return  # already fully consumed, no need to add to context
 
         if action is None:
             return
-        
+
         start = action.start
         end = action.end
 
@@ -61,27 +61,27 @@ class VariableActionController(DeviceController):
             end=end,
             total_consumption=action.total_consumption,
             max_consumption=action.max_consumption,
-            id=self._id, # maybe should be action ID instead of device ID
+            id=self._id,  # maybe should be action ID instead of device ID
         )
         context.add_variable_action(optimizer_action)
 
-    
-    def update_device(self, current_time: datetime, device_manager: IDeviceManager) -> None:
+    def update_device(self, current_time: "datetime", device_manager: "IDeviceManager") -> "None":
         """
         Update the device based on the current schedule.
-        
+
         Looks up the power consumption for the current time
         from the schedule and sets the device accordingly.
         """
         if self._schedule is None:
             return
-        
+
         assigned = self._schedule.get_variable_action(self._id)
-        interactor = device_manager.get_interactor_service().get_variable_action_interactor(self._id)
+        interactor = device_manager.get_interactor_service(
+        ).get_variable_action_interactor(self._id)
 
         if assigned is None:
             return
-        
+
         try:
             # Get the consumption rate for the current time
             consumption = assigned.get_consumption(current_time)
@@ -90,4 +90,3 @@ class VariableActionController(DeviceController):
         except ValueError:
             # Time is outside schedule range, stop consumption
             interactor.set_current(0)
-    

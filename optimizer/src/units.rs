@@ -25,6 +25,7 @@ use chrono::TimeDelta;
 use electricity_price_optimizer::time::MINUTES_PER_TIMESTEP;
 use pyo3::{
     Bound, FromPyObject, IntoPyObjectExt, PyAny, PyResult, Python,
+    basic::CompareOp,
     exceptions::PyTypeError,
     pyclass, pymethods,
     types::{PyModule, PyModuleMethods},
@@ -174,13 +175,16 @@ impl Watt {
     fn get_value(&self) -> f64 {
         self.value
     }
-    /// Equality comparison.
-    fn __eq__(&self, other: &Watt) -> bool {
-        self.value == other.value
-    }
-    /// Less-than comparison.
-    fn __lt__(&self, other: &Watt) -> bool {
-        self.value < other.value
+    /// Python __richcmp__: supports all rich comparison operations.
+    fn __richcmp__(&self, other: &Watt, op: CompareOp) -> bool {
+        match op {
+            CompareOp::Eq => self.value == other.value,
+            CompareOp::Ne => self.value != other.value,
+            CompareOp::Lt => self.value < other.value,
+            CompareOp::Le => self.value <= other.value,
+            CompareOp::Gt => self.value > other.value,
+            CompareOp::Ge => self.value >= other.value,
+        }
     }
 }
 impl Watt {
@@ -362,13 +366,16 @@ impl WattHour {
     fn get_value(&self) -> f64 {
         self.value
     }
-    /// Equality comparison.
-    fn __eq__(&self, other: &WattHour) -> bool {
-        self.value == other.value
-    }
-    /// Less-than comparison.
-    fn __lt__(&self, other: &WattHour) -> bool {
-        self.value < other.value
+    /// Python __richcmp__: supports all rich comparison operations.
+    fn __richcmp__(&self, other: &WattHour, op: CompareOp) -> bool {
+        match op {
+            CompareOp::Eq => self.value == other.value,
+            CompareOp::Ne => self.value != other.value,
+            CompareOp::Lt => self.value < other.value,
+            CompareOp::Le => self.value <= other.value,
+            CompareOp::Gt => self.value > other.value,
+            CompareOp::Ge => self.value >= other.value,
+        }
     }
 }
 impl WattHour {
@@ -514,13 +521,16 @@ impl Euro {
     fn get_value(&self) -> f64 {
         self.value
     }
-    /// Equality comparison.
-    fn __eq__(&self, other: &Euro) -> bool {
-        self.value == other.value
-    }
-    /// Less-than comparison.
-    fn __lt__(&self, other: &Euro) -> bool {
-        self.value < other.value
+    /// Python __richcmp__: supports all rich comparison operations.
+    fn __richcmp__(&self, other: &Euro, op: CompareOp) -> bool {
+        match op {
+            CompareOp::Eq => self.value == other.value,
+            CompareOp::Ne => self.value != other.value,
+            CompareOp::Lt => self.value < other.value,
+            CompareOp::Le => self.value <= other.value,
+            CompareOp::Gt => self.value > other.value,
+            CompareOp::Ge => self.value >= other.value,
+        }
     }
 }
 impl Euro {
@@ -668,13 +678,16 @@ impl EuroPerWh {
     fn get_value(&self) -> f64 {
         self.value
     }
-    /// Equality comparison.
-    fn __eq__(&self, other: &EuroPerWh) -> bool {
-        self.value == other.value
-    }
-    /// Less-than comparison.
-    fn __lt__(&self, other: &EuroPerWh) -> bool {
-        self.value < other.value
+    /// Python __richcmp__: supports all rich comparison operations.
+    fn __richcmp__(&self, other: &EuroPerWh, op: CompareOp) -> bool {
+        match op {
+            CompareOp::Eq => self.value == other.value,
+            CompareOp::Ne => self.value != other.value,
+            CompareOp::Lt => self.value < other.value,
+            CompareOp::Le => self.value <= other.value,
+            CompareOp::Gt => self.value > other.value,
+            CompareOp::Ge => self.value >= other.value,
+        }
     }
 }
 impl EuroPerWh {

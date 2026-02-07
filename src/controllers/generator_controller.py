@@ -19,14 +19,14 @@ class GeneratorController(DeviceController):
     prognoses/current output is added to the optimizer context.
     """
 
-    def __init__(self, device_id: int):
-        self._device_id = device_id
+    def __init__(self, id: int):
+        self._id = id
         self._schedule: Optional[Schedule] = None
         self._generation_prognosis: Optional[Prognoses] = None
 
     @property
-    def device_id(self) -> int:
-        return self._device_id
+    def id(self) -> int:
+        return self._id
 
     def use_schedule(self, schedule: Schedule, device_manager: IDeviceManager) -> None:
         """Store the schedule (generators typically don't act on it)."""
@@ -43,7 +43,7 @@ class GeneratorController(DeviceController):
         """
         if self._generation_prognosis is None:
             # Try to read a current value from interactor and add as a single-point prognosis
-            interactor = device_manager.get_interactor_service().get_generator_interactor(self._device_id)
+            interactor = device_manager.get_interactor_service().get_generator_interactor(self._id)
             if interactor is None:
                 return
             current = interactor.get_current(device_manager)
@@ -67,7 +67,7 @@ class GeneratorController(DeviceController):
     def update_device(self, current_time: datetime, device_manager: IDeviceManager) -> None:
         """Optional periodic update; for generators we generally don't actuate devices."""
         # Could poll interactor to advance simulated state if it exposes update()
-        interactor = device_manager.get_interactor_service().get_generator_interactor(self._device_id)
+        interactor = device_manager.get_interactor_service().get_generator_interactor(self._id)
         if interactor is None:
             return
         # Some mock interactors implement update(current_time, device_manager)

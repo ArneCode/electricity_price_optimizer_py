@@ -17,9 +17,9 @@ class MockGeneratorInteractor(GeneratorInteractor):
 
     def __init__(
             self, 
-            generator_id: int
+            id: int
         ):
-        self.id = generator_id
+        self.id = id
         self._max_power = None
         self._current_power = units.Watt(0)
         self._simulated_override = None  # if set, this value is used directly

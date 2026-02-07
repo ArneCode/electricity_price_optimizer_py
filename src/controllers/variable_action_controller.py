@@ -22,22 +22,22 @@ class VariableActionController(DeviceController):
     
     def __init__(
             self, 
-            device_id: int,
+            id: int,
         ):
-        self._device_id = device_id
+        self._id = id
         self._schedule: Optional[Schedule] = None
     
     @property
-    def device_id(self) -> int:
-        return self._device_id
+    def id(self) -> int:
+        return self._id
     
     def use_schedule(self, schedule: Schedule, device_manager: IDeviceManager) -> None:
         """Store the schedule for later use."""
         self._schedule = schedule
     
     def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime, device_manager: IDeviceManager) -> None:
-        action = device_manager.get_device_service().get_variable_action_device(self._device_id).actions[0]
-        interactor = device_manager.get_interactor_service().get_variable_action_interactor(self._device_id)
+        action = device_manager.get_device_service().get_variable_action_device(self._id).actions[0]
+        interactor = device_manager.get_interactor_service().get_variable_action_interactor(self._id)
 
         if interactor.get_total_consumed() >= action.total_consumption:
             return # already fully consumed, no need to add to context
@@ -61,7 +61,7 @@ class VariableActionController(DeviceController):
             end=end,
             total_consumption=action.total_consumption,
             max_consumption=action.max_consumption,
-            id=self._device_id, # maybe should be action ID instead of device ID
+            id=self._id, # maybe should be action ID instead of device ID
         )
         context.add_variable_action(optimizer_action)
 
@@ -76,8 +76,8 @@ class VariableActionController(DeviceController):
         if self._schedule is None:
             return
         
-        assigned = self._schedule.get_variable_action(self._device_id)
-        interactor = device_manager.get_interactor_service().get_variable_action_interactor(self._device_id)
+        assigned = self._schedule.get_variable_action(self._id)
+        interactor = device_manager.get_interactor_service().get_variable_action_interactor(self._id)
 
         if assigned is None:
             return
@@ -86,7 +86,7 @@ class VariableActionController(DeviceController):
             # Get the consumption rate for the current time
             consumption = assigned.get_consumption(current_time)
             # Instruct the interactor to set this consumption
-            interactor.set_current(consumption)
+            interactor.set_current(consumption, device_manager)
         except ValueError:
             # Time is outside schedule range, stop consumption
             interactor.set_current(0)

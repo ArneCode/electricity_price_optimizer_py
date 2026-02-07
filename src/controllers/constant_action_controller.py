@@ -17,27 +17,27 @@ class ConstantActionController(DeviceController):
     
     def __init__(
             self, 
-            device_id: int,
+            id: int,
         ):
-        self._device_id = device_id
+        self._id = id
         self._schedule: Optional[Schedule] = None
     
     @property
-    def device_id(self) -> int:
-        return self._device_id
+    def id(self) -> int:
+        return self._id
     
     @property
     def assigned_start_time(self) -> Optional[datetime]:
         if self._schedule is None:
             return None
-        assigned = self._schedule.get_constant_action(self._device_id)
+        assigned = self._schedule.get_constant_action(self._id)
         if assigned is None:
             return None
         # AssignedConstantAction from the Rust wrapper exposes accessors
         return assigned.get_start_time()
     
     def is_controllable(self, device_manager: IDeviceManager) -> bool:
-        interactor = device_manager.get_interactor_service().get_constant_action_interactor(self._device_id)
+        interactor = device_manager.get_interactor_service().get_constant_action_interactor(self._id)
         state = interactor.get_action_state(device_manager)
         return state in (ActionState.IDLE, ActionState.COMPLETED)
 
@@ -46,7 +46,7 @@ class ConstantActionController(DeviceController):
             self._schedule = schedule
 
     def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime, device_manager: IDeviceManager) -> None:
-        action = device_manager.get_device_service().get_constant_action_device(self._device_id).actions[0]
+        action = device_manager.get_device_service().get_constant_action_device(self._id).actions[0]
         if action is None:
             return
         
@@ -66,19 +66,19 @@ class ConstantActionController(DeviceController):
                     end_before=end_before,
                     duration=action.duration,
                     consumption=action.consumption,
-                    id=self._device_id, # maybe needs to be action ID
+                    id=self._id, # maybe needs to be action ID
                 )
             )
         else:
             if self._schedule is None:
                 return
-            assigned = self._schedule.get_constant_action(self._device_id)
+            assigned = self._schedule.get_constant_action(self._id)
             if assigned is not None:
                 context.add_past_constant_action(assigned)
 
     
     def update_device(self, current_time: datetime, device_manager: IDeviceManager) -> None:
-        interactor = device_manager.get_interactor_service().get_constant_action_interactor(self._device_id)
+        interactor = device_manager.get_interactor_service().get_constant_action_interactor(self._id)
         state = interactor.get_action_state(device_manager)
         
         if state == ActionState.IDLE:

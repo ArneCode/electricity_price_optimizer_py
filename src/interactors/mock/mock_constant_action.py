@@ -1,9 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from backend.src.device_manager import DeviceManager
 from ..interfaces import ConstantActionInteractor, ActionState
-from models.actions import ConstantAction
 
 from electricity_price_optimizer_py import units
 
@@ -14,9 +12,9 @@ class MockConstantActionInteractor(ConstantActionInteractor):
     
     def __init__(
         self,
-        device_id: int,
+        id: int,
     ):
-        self._device_id = device_id
+        self._id = id
         self._state = ActionState.IDLE
         self._start_time: Optional[datetime] = None
      
@@ -38,7 +36,7 @@ class MockConstantActionInteractor(ConstantActionInteractor):
     def get_current(self, device_manager: IDeviceManager) -> units.Watt:
         """Get the current power consumption in W."""
         if self._state == ActionState.RUNNING:
-            action = device_manager.get_device_service().get_constant_action_device(self._device_id).actions[0]
+            action = device_manager.get_device_service().get_constant_action_device(self._id).actions[0]
             return action.consumption
         return units.Watt(0)
     
@@ -49,7 +47,7 @@ class MockConstantActionInteractor(ConstantActionInteractor):
     def update(self, current_time: datetime, device_manager: IDeviceManager) -> None:
         """Update action state based on current time."""
         if self._state == ActionState.RUNNING and self._start_time:
-            action = device_manager.get_device_service().get_constant_action_device(self._device_id).actions[0]
+            action = device_manager.get_device_service().get_constant_action_device(self._id).actions[0]
             elapsed = (current_time - self._start_time)
             if elapsed >= action.duration:
                 self._state = ActionState.COMPLETED

@@ -16,7 +16,7 @@ use electricity_price_optimizer::{
         prognoses::Prognoses,
     },
     schedule::Schedule as RustSchedule,
-    time::{MINUTES_PER_TIMESTEP, STEPS_PER_DAY, Time},
+    time::{MINUTES_PER_TIMESTEP, Time},
 };
 use pyo3::{
     Bound, FromPyObject, Py, PyAny, PyErr, PyResult, Python,
@@ -55,7 +55,7 @@ fn time_to_datetime(time: Time, start_time: DateTime<Utc>) -> PyResult<DateTime<
 
     // 2. Define our interval in nanoseconds
     let ns_per_minute: i64 = 60 * 1_000_000_000;
-    let interval_ns = (MINUTES_PER_TIMESTEP as i64 * ns_per_minute) as i64;
+    let interval_ns = (MINUTES_PER_TIMESTEP as i64 * ns_per_minute);
 
     // 3. Calculate target time in nanoseconds
     let added_ns = time.get_minutes() as i64 * ns_per_minute;
@@ -73,7 +73,7 @@ fn time_to_datetime(time: Time, start_time: DateTime<Utc>) -> PyResult<DateTime<
     Ok(result)
 }
 fn check_on_timestep_boundary(dt: DateTime<Utc>) -> PyResult<()> {
-    if (dt.minute() % MINUTES_PER_TIMESTEP) != 0
+    if !dt.minute().is_multiple_of(MINUTES_PER_TIMESTEP)
         || dt.second() != 0
         || dt.timestamp_subsec_nanos() != 0
     {
@@ -117,13 +117,13 @@ fn datetime_to_time(dt: DateTime<Utc>, start_time: DateTime<Utc>) -> Result<Time
     let total_minutes = duration.num_minutes() as u32;
     let timesteps = total_minutes / MINUTES_PER_TIMESTEP;
     let result = Time::from_timestep(timesteps);
-    // check that converting back gives us the same datetime (i.e. that dt is on a timestep boundary)
-    let reverse = time_to_datetime(result, start_time)?;
-    if reverse != dt {
-        return Err(PyValueError::new_err(format!(
-            "DateTime {dt} got converted to time {result:?} which converts back to {reverse}, expected {dt}. base_dt was {base_dt}",
-        )));
-    }
+    // // check that converting back gives us the same datetime (i.e. that dt is on a timestep boundary)
+    // let reverse = time_to_datetime(result, start_time)?;
+    // if reverse != dt {
+    //     return Err(PyValueError::new_err(format!(
+    //         "DateTime {dt} got converted to time {result:?} which converts back to {reverse}, expected {dt}. base_dt was {base_dt}",
+    //     )));
+    // }
     Ok(result)
 }
 
@@ -136,11 +136,8 @@ impl PrognosesProvider {
         Prognoses::from_closure_result(|t: Time| {
             let curr_t = time_to_datetime(t, start_time)?;
             let next_t = time_to_datetime(t.get_next_timestep(), start_time)?;
-            let result = self
-                .get_data
-                .call1(py, (curr_t, next_t))
-                .map_err(Into::<PyErr>::into)?;
-            Ok(result.extract::<T>(py).map_err(Into::into)?)
+            let result = self.get_data.call1(py, (curr_t, next_t))?;
+            result.extract::<T>(py).map_err(Into::into)
         })
     }
 }
@@ -179,7 +176,7 @@ impl ConstantAction {
 impl ConstantAction {
     fn to_rust<'py>(
         &self,
-        py: Python<'py>,
+        _py: Python<'py>,
         start_time: DateTime<Utc>,
     ) -> PyResult<RustConstantAction> {
         let duration = self.duration;
@@ -187,7 +184,7 @@ impl ConstantAction {
             return Err(PyValueError::new_err("Duration must be less than 1 day"));
         }
         let duration_minutes = duration.num_minutes() as u32;
-        if (duration_minutes % MINUTES_PER_TIMESTEP) != 0 {
+        if !duration_minutes.is_multiple_of(MINUTES_PER_TIMESTEP) {
             return Err(PyValueError::new_err(format!(
                 "Duration must be a multiple of {} minutes",
                 MINUTES_PER_TIMESTEP
@@ -442,7 +439,7 @@ impl OptimizerContext {
 
     fn add_variable_action<'py>(
         &mut self,
-        py: Python<'py>,
+        _py: Python<'py>,
         action: &VariableAction,
     ) -> PyResult<()> {
         self.variable_actions
@@ -455,7 +452,7 @@ impl OptimizerContext {
     }
     fn add_past_constant_action<'py>(
         &mut self,
-        py: Python<'py>,
+        _py: Python<'py>,
         action: &AssignedConstantAction,
     ) -> PyResult<()> {
         // find out how much time has passed since action start
@@ -511,40 +508,32 @@ pub struct Schedule {
 #[pymethods]
 impl Schedule {
     fn get_constant_action(&self, id: u32) -> Option<AssignedConstantAction> {
-        if let Some(action) = self.inner.get_constant_action(id) {
-            Some(AssignedConstantAction {
+        self.inner
+            .get_constant_action(id)
+            .map(|action| AssignedConstantAction {
                 inner: action.clone(),
                 start_timestamp: self.start_timestamp,
             })
-        } else {
-            None
-        }
     }
     fn get_variable_action(&self, id: u32) -> Option<AssignedVariableAction> {
-        if let Some(action) = self.inner.get_variable_action(id) {
-            Some(AssignedVariableAction {
+        self.inner
+            .get_variable_action(id)
+            .map(|action| AssignedVariableAction {
                 inner: action.clone(),
                 start_timestamp: self.start_timestamp,
             })
-        } else {
-            None
-        }
     }
     fn get_battery(&self, id: u32) -> Option<AssignedBattery> {
-        if let Some(battery) = self.inner.get_battery(id) {
-            Some(AssignedBattery {
-                inner: battery.clone(),
-                start_timestamp: self.start_timestamp,
-            })
-        } else {
-            None
-        }
+        self.inner.get_battery(id).map(|battery| AssignedBattery {
+            inner: battery.clone(),
+            start_timestamp: self.start_timestamp,
+        })
     }
 }
 
 #[pyfunction]
 fn run_simulated_annealing(
-    py: Python<'_>,
+    _py: Python<'_>,
     context: &OptimizerContext,
 ) -> PyResult<(Euro, Schedule)> {
     let rust_context = context.to_rust();

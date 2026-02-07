@@ -1,12 +1,9 @@
-use std::{
-    f32::consts::E,
-    ops::{Add, Div, Mul, Sub},
-};
+use std::ops::{Add, Div, Mul, Sub};
 
 use chrono::TimeDelta;
 use electricity_price_optimizer::time::MINUTES_PER_TIMESTEP;
 use pyo3::{
-    Bound, FromPyObject, IntoPyObjectExt, Py, PyAny, PyResult, Python,
+    Bound, FromPyObject, IntoPyObjectExt, PyAny, PyResult, Python,
     exceptions::PyTypeError,
     pyclass, pymethods,
     types::{PyModule, PyModuleMethods},

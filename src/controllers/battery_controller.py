@@ -6,8 +6,6 @@ from backend.src.device_manager import IDeviceManager
 from .base import DeviceController
 from interactors import BatteryInteractor
 
-from models.devices import Battery
-
 from electricity_price_optimizer_py import (
     Schedule,
     OptimizerContext,
@@ -27,10 +25,9 @@ class BatteryController(DeviceController):
     def __init__(
             self,
             battery_id: int, 
-            interactor: BatteryInteractor):
+        ):
 
         self._battery_id = battery_id
-        self._interactor = interactor
         self._schedule: Optional[Schedule] = None
     
     @property
@@ -78,7 +75,6 @@ class BatteryController(DeviceController):
         assigned = self._schedule.get_battery(self._battery_id)
         if assigned is None:
             return
-
 
         try:
             # Get the charge speed (W) for the current time from the AssignedBattery

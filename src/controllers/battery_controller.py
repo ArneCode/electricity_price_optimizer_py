@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from typing import Optional
 
+from backend.src.device_manager import IDeviceManager
+
 from .base import DeviceController
 from interactors import BatteryInteractor
 
@@ -22,55 +24,47 @@ class BatteryController(DeviceController):
     - Device control logic
     """
     
-    def __init__(self, battery: Battery, interactor: BatteryInteractor):
-        """
-        Initialize the battery controller.
-        
-        Args:
-            battery: The battery device model
-            interactor: The interactor for device communication (injected)
-        """
-        self._battery = battery
+    def __init__(
+            self,
+            battery_id: int, 
+            interactor: BatteryInteractor):
+
+        self._battery_id = battery_id
         self._interactor = interactor
         self._schedule: Optional[Schedule] = None
     
     @property
     def device_id(self) -> int:
-        return self._battery.id
+        return self._battery_id
     
-    @property
-    def device_name(self) -> str:
-        return self._battery.name
-    
-    @property
-    def battery(self) -> Battery:
-        """Get the battery model."""
-        return self._battery
-    
-    def use_schedule(self, schedule: Schedule) -> None:
+    def use_schedule(self, schedule: Schedule, device_manager: IDeviceManager) -> None:
         """Store the schedule for later use when updating the device."""
         self._schedule = schedule
     
-    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime) -> None:
+    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime, device_manager: IDeviceManager) -> None:
         """
         Add battery information to the optimizer context.
         
         Updates the battery's initial level from the actual current charge
         before adding to context.
         """
+
         # Update initial level from actual device state
-        current_charge = self._interactor.get_charge()
+        battery_interactor = device_manager.get_interactor_service().get_battery_interactor(self._battery_id)
+        battery = device_manager.get_device_service().get_battery(self._battery_id)
+
+        current_charge = battery_interactor.get_charge(device_manager)
 
         optimizer_battery = OptimizerBattery(
-            capacity=self._battery.capacity,
-            max_charge_rate=self._battery.maximum_charge_rate,
-            max_discharge_rate=self._battery.maximum_output_rate,
+            capacity=battery.capacity,
+            max_charge_rate=battery.max_charge_rate,
+            max_discharge_rate=battery.max_discharge_rate,
             initial_charge=current_charge,
-            id=self._battery.id,
+            id=self._battery_id,
         )
         context.add_battery(optimizer_battery)
     
-    def update_device(self, current_time: datetime) -> None:
+    def update_device(self, current_time: datetime, device_manager: IDeviceManager) -> None:
         """
         Update the battery based on the current schedule.
         
@@ -81,34 +75,18 @@ class BatteryController(DeviceController):
             return
         
         # `Schedule` wrapper exposes `get_battery(id)` which returns an AssignedBattery
-        assigned = self._schedule.get_battery(self._battery.id)
+        assigned = self._schedule.get_battery(self._battery_id)
         if assigned is None:
             return
+
 
         try:
             # Get the charge speed (W) for the current time from the AssignedBattery
             charge_rate = assigned.get_charge_speed(current_time)
             # Instruct the battery interactor to set this charge rate (expects units.Watt)
-            self._interactor.set_current(charge_rate)
+            interactor = device_manager.get_interactor_service().get_battery_interactor(self._battery_id)
+            interactor.set_current(charge_rate, device_manager)
         except ValueError:
             # Time is outside schedule range, do nothing
+            print(f"Current time {current_time} is outside the schedule range for battery {self._battery_id}. No update applied.")
             pass
-    
-    def get_current_state(self) -> dict:
-        """Get the current state of the battery."""
-        return {
-            "id": self._battery.id,
-            "name": self._battery.name,
-            "type": "battery",
-            "charge": self._interactor.get_charge(),
-            "current": self._interactor.get_current(),
-            "capacity": self._battery.capacity,
-            "charge_percentage": (
-                (getattr(self._interactor.get_charge(), "value", float(self._interactor.get_charge())) /
-                 getattr(self._battery.capacity, "value", float(self._battery.capacity))) * 100
-            ),
-        }
-    
-    def update_battery_model(self, battery: Battery) -> None:
-        """Update the battery model with new parameters."""
-        self._battery = battery

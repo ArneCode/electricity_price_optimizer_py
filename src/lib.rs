@@ -95,20 +95,35 @@ fn datetime_to_time(dt: DateTime<Utc>, start_time: DateTime<Utc>) -> Result<Time
             dt, start_time
         )));
     }
-    // the first datetime before or equal to dt that is on a timestep boundary
+    // the first datetime before or equal to start_time that is on a timestep boundary
     let base_dt = {
-        let minute = dt.minute() - (dt.minute() % MINUTES_PER_TIMESTEP);
-        Utc.with_ymd_and_hms(dt.year(), dt.month(), dt.day(), dt.hour(), minute, 0)
-            .single()
-            .ok_or_else(|| {
-                PyValueError::new_err(format!("Failed to create base datetime from {}", dt))
-            })?
+        let minute = start_time.minute() - (start_time.minute() % MINUTES_PER_TIMESTEP);
+        Utc.with_ymd_and_hms(
+            start_time.year(),
+            start_time.month(),
+            start_time.day(),
+            start_time.hour(),
+            minute,
+            0,
+        )
+        .single()
+        .ok_or_else(|| {
+            PyValueError::new_err(format!("Failed to create base datetime from {}", dt))
+        })?
     };
 
     let duration = dt.signed_duration_since(base_dt);
     let total_minutes = duration.num_minutes() as u32;
     let timesteps = total_minutes / MINUTES_PER_TIMESTEP;
-    Ok(Time::from_timestep(timesteps))
+    let result = Time::from_timestep(timesteps);
+    // check that converting back gives us the same datetime (i.e. that dt is on a timestep boundary)
+    let reverse = time_to_datetime(result, start_time);
+    if reverse != dt {
+        return Err(PyValueError::new_err(format!(
+            "DateTime {dt} got converted to time {result:?} which converts back to {reverse}, expected {dt}. base_dt was {base_dt}",
+        )));
+    }
+    Ok(result)
 }
 
 impl PrognosesProvider {
@@ -180,6 +195,15 @@ impl ConstantAction {
         let duration = Time::new(0, duration_minutes);
 
         let start_time_converted = datetime_to_time(self.start_from, start_time)?;
+        // check that reversing the conversion gives us the same datetime (i.e. that start_from is on a timestep boundary)
+        // assert!(
+        //     time_to_datetime(start_time_converted, start_time) == self.start_from,
+        //     "start_from datetime {} is not on a timestep boundary, got converted time {:?} which converts back to {}, expected {}",
+        //     self.start_from,
+        //     start_time_converted,
+        //     time_to_datetime(start_time_converted, start_time),
+        //     self.start_from
+        // );
         let end_time_converted = datetime_to_time(self.end_before, start_time)?;
 
         Ok(RustConstantAction::new(

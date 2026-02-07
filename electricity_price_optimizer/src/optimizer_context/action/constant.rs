@@ -36,7 +36,8 @@ impl ConstantAction {
     ) -> Self {
         assert!(
             start_from + duration <= end_before,
-            "Invalid constant action time bounds"
+            "Invalid time bounds for ConstantAction: start_from + duration must be <= end_before. Got start_from: {start_from:?}, duration: {duration:?}, end_before: {end_before:?}, current calculated end time: {:?}",
+            start_from + duration
         );
         Self {
             start_from,

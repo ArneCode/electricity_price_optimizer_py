@@ -3,78 +3,77 @@ from typing import TYPE_CHECKING
 from datetime import datetime
 
 if TYPE_CHECKING:
-    from models import Schedule, OptimizerContext
+    from device_manager import IDeviceManager
 
 from electricity_price_optimizer_py import (
     Schedule,
     OptimizerContext,
 )
 
-from device_manager import IDeviceManager
 
 class DeviceController(ABC):
     """
     Abstract base class for device controllers.
-    
+
     Each controller acts as a Facade for its device subsystem,
     hiding the complexity of device communication from the Orchestrator.
     """
-    
+
     @property
     @abstractmethod
-    def device_id(self, device_manager: IDeviceManager) -> int:
+    def device_id(self, device_manager: "IDeviceManager") -> int:
         """Get the ID of the controlled device."""
         pass
-    
+
     @property
     @abstractmethod
-    def device_name(self, device_manager: IDeviceManager) -> str:
+    def device_name(self, device_manager: "IDeviceManager") -> str:
         """Get the name of the controlled device."""
         pass
-    
+
     @abstractmethod
-    def use_schedule(self, schedule: Schedule, device_manager: IDeviceManager) -> None:
+    def use_schedule(self, schedule: Schedule, device_manager: "IDeviceManager") -> None:
         """
         Inform the controller about the schedule to use.
-        
+
         The controller stores this schedule and uses it when
         updateDevice() is called to determine the device behavior.
-        
+
         Args:
             schedule: The optimized schedule from the optimizer
         """
         pass
-    
+
     @abstractmethod
-    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime, device_manager: IDeviceManager) -> None:
+    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime, device_manager: "IDeviceManager") -> None:
         """
         Add device information to the optimizer context.
-        
+
         This adds all relevant information about the device that
         the optimizer needs to create an optimized schedule.
-        
+
         Args:
             context: The optimizer context to add information to
             context_start_time: If provided, the datetime the optimizer considers as start
         """
         pass
-    
+
     @abstractmethod
-    def update_device(self, current_time: datetime, device_manager: IDeviceManager) -> None:
+    def update_device(self, current_time: datetime, device_manager: "IDeviceManager") -> None:
         """
         Update the physical device based on the current schedule.
-        
+
         This method:
         1. Looks up the behavior for the device at the current time
         2. Instructs the device (via interactor) how to behave
         """
         pass
-    
+
     @abstractmethod
-    def get_current_state(self, device_manager: IDeviceManager) -> dict:
+    def get_current_state(self, device_manager: "IDeviceManager") -> dict:
         """
         Get the current state of the device.
-        
+
         Returns:
             Dictionary containing current device state
         """

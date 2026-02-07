@@ -1,3 +1,6 @@
+from api.orchestrator import router as orchestrator_router
+from fastapi import FastAPI
+import uvicorn
 from sqlalchemy.orm import Session
 from database import engine, init_db
 from device import *
@@ -7,21 +10,12 @@ init_db()
 
 # create a new session
 
-with Session(engine) as session:
-    # create a new battery
-    new_battery = Battery(
-        name="Home Battery",
-        capacity=WattHour(10000),
-        current_charge=WattHour(5000),
-        max_charge_rate=Watt(2000),
-        max_discharge_rate=Watt(2000),
-        efficiency=0.9
-    )
+# main.py
 
-    # add the battery to the session
-    session.add(new_battery)
+app = FastAPI()
 
-    # commit the transaction
-    session.commit()
+# Include the orchestrator router
+app.include_router(orchestrator_router)
 
-    print("Battery added with ID:", new_battery.id)
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)

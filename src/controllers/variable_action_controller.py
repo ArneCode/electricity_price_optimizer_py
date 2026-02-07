@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Optional
 
 from .base import DeviceController
-from models import VariableAction
 from interactors import VariableActionInteractor
 
 from electricity_price_optimizer_py import (
@@ -12,6 +11,8 @@ from electricity_price_optimizer_py import (
     AssignedVariableAction
 )
 
+from device_manager import IDeviceManager
+
 class VariableActionController(DeviceController):
     """
     Controller for variable action devices (e.g., EV charging).
@@ -19,38 +20,33 @@ class VariableActionController(DeviceController):
     Manages actions with variable power consumption profiles.
     """
     
-    def __init__(self, action: VariableAction, interactor: VariableActionInteractor):
-        """
-        Initialize the variable action controller.
-        
-        Args:
-            action: The variable action model
-            interactor: The interactor for device communication (injected)
-        """
-        self._action = action
-        self._interactor = interactor
+    def __init__(
+            self, 
+            device_id: int,
+        ):
+        self._device_id = device_id
         self._schedule: Optional[Schedule] = None
     
     @property
     def device_id(self) -> int:
-        return self._action.id
-    
-    @property
-    def device_name(self) -> str:
-        return self._action.name
-    
-    @property
-    def action(self) -> VariableAction:
-        """Get the action model."""
-        return self._action
+        return self._device_id
     
     def use_schedule(self, schedule: Schedule) -> None:
         """Store the schedule for later use."""
         self._schedule = schedule
     
-    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime) -> None:
-        start = self._action.start
-        end = self._action.end
+    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime, device_manager: IDeviceManager) -> None:
+        action = device_manager.get_device_service().get_variable_action_device(self._device_id).actions[0]
+        interactor = device_manager.get_interactor_service().get_variable_action_interactor(self._device_id)
+
+        if interactor.get_total_consumed() >= action.total_consumption:
+            return # already fully consumed, no need to add to context
+
+        if action is None:
+            return
+        
+        start = action.start
+        end = action.end
 
         # Clamp start to the optimization horizon start (often "current_time")
         if start < current_time:
@@ -61,16 +57,16 @@ class VariableActionController(DeviceController):
             return  # or raise ValueError / mark not plannable
 
         optimizer_action = OptimizerVariableAction(
-            id=self._action.id,
-            total_consumption=self._action.total_energy_wh,
-            max_consumption=self._action.max_power_watts,
             start=start,
             end=end,
+            total_consumption=action.total_consumption,
+            max_consumption=action.max_consumption,
+            id=self._device_id, # maybe should be action ID instead of device ID
         )
         context.add_variable_action(optimizer_action)
 
     
-    def update_device(self, current_time: datetime) -> None:
+    def update_device(self, current_time: datetime, device_manager: IDeviceManager) -> None:
         """
         Update the device based on the current schedule.
         
@@ -80,7 +76,9 @@ class VariableActionController(DeviceController):
         if self._schedule is None:
             return
         
-        assigned = self._schedule.get_variable_action(self._action.id)
+        assigned = self._schedule.get_variable_action(self._device_id)
+        interactor = device_manager.get_interactor_service().get_variable_action_interactor(self._device_id)
+
         if assigned is None:
             return
         
@@ -88,32 +86,8 @@ class VariableActionController(DeviceController):
             # Get the consumption rate for the current time
             consumption = assigned.get_consumption(current_time)
             # Instruct the interactor to set this consumption
-            self._interactor.set_current(consumption)
+            interactor.set_current(consumption)
         except ValueError:
             # Time is outside schedule range, stop consumption
-            self._interactor.set_current(0)
+            interactor.set_current(0)
     
-    def get_current_state(self) -> dict:
-        """Get the current state of the action."""
-        return {
-            "id": self._action.id,
-            "name": self._action.name,
-            "type": "variable_action",
-            "current_consumption": self._interactor.get_current(),
-            "total_consumed": self._interactor.get_total_consumed(),
-            "total_required": self._action.total_energy_wh,
-            "max_consumption": self._action.max_power_watts,
-            # compute percentage using numeric values to avoid unit-wrapper arithmetic
-            "progress_percentage": (
-                getattr(self._interactor.get_total_consumed(), "value", float(self._interactor.get_total_consumed()))
-                / getattr(self._action.total_energy_wh, "value", float(self._action.total_energy_wh))
-            ) * 100,
-            "time_window": {
-                "start": self._action.start.isoformat(),
-                "end": self._action.end.isoformat(),
-            },
-        }
-    
-    def update_action_model(self, action: VariableAction) -> None:
-        """Update the action model with new parameters."""
-        self._action = action

@@ -1,3 +1,16 @@
+//! Python bindings for electricity_price_optimizer.
+//!
+//! This module exposes:
+//! - Units (Euro, EuroPerWh, Watt, WattHour) with conversion helpers
+//! - Time conversions between chrono DateTime<Utc> and optimizer Time
+//! - PrognosesProvider for passing Python closures to Rust
+//! - Actions (constant and variable), batteries, optimizer context, and schedules
+//!
+//! Conventions:
+//! - Timestep length: MINUTES_PER_TIMESTEP minutes
+//! - Prices: micro-euro per Wh internally (i64)
+//! - Power/energy: milli-Wh and milli-Wh per timestep (i64) internally
+//! - DateTime values must lie on timestep boundaries (minute % MINUTES_PER_TIMESTEP == 0; seconds/nanoseconds == 0)
 mod units;
 use std::{fmt::Debug, rc::Rc};
 
@@ -33,7 +46,11 @@ use pyo3::{
 // thus return cost is in milli micro Euro = nano Euro
 
 use crate::units::{Euro, EuroPerWh, Watt, WattHour, register_units_submodule};
+
 #[pyclass]
+/// Provides prognoses data through a Python callable returning values for a time interval.
+/// The callable signature must be: get_data(curr: DateTime[UTC], next: DateTime[UTC]) -> T.
+/// T must be extractable from Python (e.g., EuroPerWh or i64).
 struct PrognosesProvider {
     get_data: Py<PyAny>,
 }
@@ -41,10 +58,14 @@ struct PrognosesProvider {
 #[pymethods]
 impl PrognosesProvider {
     #[new]
+    /// Create a new provider with a Python callable that returns data for a given interval.
     fn new(get_data: Py<PyAny>) -> Self {
         PrognosesProvider { get_data }
     }
 }
+
+/// Convert optimizer Time to a DateTime<Utc>, aligned to the timestep boundary relative to start_time.
+/// Rounds down to the nearest timestep and never before start_time.
 fn time_to_datetime(time: Time, start_time: DateTime<Utc>) -> PyResult<DateTime<Utc>> {
     // 1. Get starting point in nanoseconds
     // .expect() is used here because Utc timestamps usually fit in i64 nanos
@@ -72,7 +93,19 @@ fn time_to_datetime(time: Time, start_time: DateTime<Utc>) -> PyResult<DateTime<
 
     Ok(result)
 }
-fn check_on_timestep_boundary(dt: DateTime<Utc>) -> PyResult<()> {
+
+/// Validate that a DateTime<Utc> is on a timestep boundary relative to start_time.
+/// Returns error if before start_time or not aligned to the timestep.
+fn check_on_timestep_boundary(dt: DateTime<Utc>, start_time: DateTime<Utc>) -> PyResult<()> {
+    if (dt < start_time) {
+        return Err(PyValueError::new_err(format!(
+            "DateTime {} is before start time {}",
+            dt, start_time
+        )));
+    }
+    if dt == start_time {
+        return Ok(());
+    }
     if !dt.minute().is_multiple_of(MINUTES_PER_TIMESTEP)
         || dt.second() != 0
         || dt.timestamp_subsec_nanos() != 0
@@ -86,6 +119,9 @@ fn check_on_timestep_boundary(dt: DateTime<Utc>) -> PyResult<()> {
     }
     Ok(())
 }
+
+/// Convert a DateTime<Utc> to optimizer Time, assuming dt is on a timestep boundary.
+/// Errors if dt < start_time or cannot construct the base alignment.
 fn datetime_to_time(dt: DateTime<Utc>, start_time: DateTime<Utc>) -> Result<Time, PyErr> {
     if dt == start_time {
         return Ok(Time::from_timestep(0));
@@ -117,17 +153,12 @@ fn datetime_to_time(dt: DateTime<Utc>, start_time: DateTime<Utc>) -> Result<Time
     let total_minutes = duration.num_minutes() as u32;
     let timesteps = total_minutes / MINUTES_PER_TIMESTEP;
     let result = Time::from_timestep(timesteps);
-    // // check that converting back gives us the same datetime (i.e. that dt is on a timestep boundary)
-    // let reverse = time_to_datetime(result, start_time)?;
-    // if reverse != dt {
-    //     return Err(PyValueError::new_err(format!(
-    //         "DateTime {dt} got converted to time {result:?} which converts back to {reverse}, expected {dt}. base_dt was {base_dt}",
-    //     )));
-    // }
     Ok(result)
 }
 
 impl PrognosesProvider {
+    /// Create a Prognoses<T> from the Python callable, invoked per timestep interval [t, t+1).
+    /// T must implement FromPyObjectOwned. Errors propagate from Python callable or extraction.
     fn get_prognoses<'py, T: Clone + Debug + Default + FromPyObjectOwned<'py>>(
         &self,
         py: Python<'py>,
@@ -141,22 +172,27 @@ impl PrognosesProvider {
         })
     }
 }
+
 #[pyclass(unsendable)]
 #[derive(Clone)]
+/// A fixed-duration action with constant consumption per timestep.
+/// Times must be on timestep boundaries.
 pub struct ConstantAction {
-    /// The earliest time the action can start.
+    /// Earliest action start (inclusive).
     pub start_from: DateTime<Utc>,
-    /// The latest time the action must end before.
+    /// Latest action end (exclusive).
     pub end_before: DateTime<Utc>,
-    /// The duration of the action.
+    /// Duration of the action. Must be < 1 day and a multiple of MINUTES_PER_TIMESTEP.
     pub duration: TimeDelta,
-    /// The fixed consumption amount of the action for every timestep.
+    /// Fixed consumption per timestep.
     pub consumption: Watt,
+    /// Unique identifier.
     id: u32,
 }
 #[pymethods]
 impl ConstantAction {
     #[new]
+    /// Create a ConstantAction. All DateTime values must align to timestep boundaries.
     fn new(
         start_from: DateTime<Utc>,
         end_before: DateTime<Utc>,
@@ -174,6 +210,7 @@ impl ConstantAction {
     }
 }
 impl ConstantAction {
+    /// Convert to internal RustConstantAction, validating duration and timestep alignment.
     fn to_rust<'py>(
         &self,
         _py: Python<'py>,
@@ -192,16 +229,9 @@ impl ConstantAction {
         }
         let duration = Time::new(0, duration_minutes);
 
+        check_on_timestep_boundary(self.start_from, start_time)?;
         let start_time_converted = datetime_to_time(self.start_from, start_time)?;
-        // check that reversing the conversion gives us the same datetime (i.e. that start_from is on a timestep boundary)
-        // assert!(
-        //     time_to_datetime(start_time_converted, start_time) == self.start_from,
-        //     "start_from datetime {} is not on a timestep boundary, got converted time {:?} which converts back to {}, expected {}",
-        //     self.start_from,
-        //     start_time_converted,
-        //     time_to_datetime(start_time_converted, start_time),
-        //     self.start_from
-        // );
+        check_on_timestep_boundary(self.end_before, start_time)?;
         let end_time_converted = datetime_to_time(self.end_before, start_time)?;
 
         Ok(RustConstantAction::new(
@@ -215,38 +245,46 @@ impl ConstantAction {
 }
 
 #[pyclass(unsendable)]
+/// A constant action assigned by the optimizer, exposing start/end times and ID.
 pub struct AssignedConstantAction {
     inner: RustAssignedConstantAction,
     start_timestamp: DateTime<Utc>,
 }
 #[pymethods]
 impl AssignedConstantAction {
+    /// Get the assigned start time as DateTime<Utc>.
     fn get_start_time(&self) -> PyResult<DateTime<Utc>> {
         time_to_datetime(self.inner.get_start_time(), self.start_timestamp)
     }
+    /// Get the assigned end time as DateTime<Utc>.
     fn get_end_time(&self) -> PyResult<DateTime<Utc>> {
         time_to_datetime(self.inner.get_end_time(), self.start_timestamp)
     }
+    /// Get the unique action ID.
     fn get_id(&self) -> u32 {
         self.inner.get_id()
     }
 }
+
 #[pyclass(unsendable)]
+/// A variable action with total energy and per-timestep max consumption constraints.
+/// Times must be on timestep boundaries.
 pub struct VariableAction {
-    /// The earliest time the action can start.
+    /// Earliest time the action can start (inclusive).
     pub start: DateTime<Utc>,
-    /// The latest time the action must end.
+    /// Latest time the action must end (exclusive).
     pub end: DateTime<Utc>,
-    /// The total consumption amount of the action.
+    /// Total energy to consume over the window.
     pub total_consumption: WattHour,
-    /// The maximum consumption amount of the action for every timestep.
+    /// Per-timestep maximum consumption.
     pub max_consumption: Watt,
-    /// The unique identifier for the action.
+    /// Unique identifier.
     id: u32,
 }
 #[pymethods]
 impl VariableAction {
     #[new]
+    /// Create a VariableAction. DateTimes must be aligned to timestep boundaries.
     fn new(
         start: DateTime<Utc>,
         end: DateTime<Utc>,
@@ -264,8 +302,11 @@ impl VariableAction {
     }
 }
 impl VariableAction {
+    /// Convert to internal RustVariableAction, validating timestep alignment.
     fn to_rust(&self, start_time: DateTime<Utc>) -> PyResult<RustVariableAction> {
+        check_on_timestep_boundary(self.start, start_time)?;
         let start_time_converted = datetime_to_time(self.start, start_time)?;
+        check_on_timestep_boundary(self.end, start_time)?;
         let end_time_converted = datetime_to_time(self.end, start_time)?;
 
         Ok(RustVariableAction::new(
@@ -277,6 +318,7 @@ impl VariableAction {
         ))
     }
 }
+
 #[pyclass(unsendable)]
 pub struct AssignedVariableAction {
     inner: RustAssignedVariableAction,
@@ -297,15 +339,21 @@ impl AssignedVariableAction {
 }
 #[pyclass(unsendable)]
 pub struct Battery {
+    /// Maximum capacity.
     pub capacity: WattHour,
+    /// Maximum charge rate per timestep.
     pub max_charge_rate: Watt,
+    /// Maximum discharge rate per timestep.
     pub max_discharge_rate: Watt,
+    /// Initial charge level.
     pub initial_charge: WattHour,
+    /// Unique identifier.
     pub id: u32,
 }
 #[pymethods]
 impl Battery {
     #[new]
+    /// Create a Battery definition.
     fn new(
         capacity: WattHour,
         max_charge_rate: Watt,
@@ -323,6 +371,7 @@ impl Battery {
     }
 }
 impl Battery {
+    /// Convert to internal RustBattery with losses fixed at 1.0 (no loss).
     fn to_rust(&self) -> RustBattery {
         RustBattery::new(
             self.capacity.to_milli_wh() as i64,
@@ -334,13 +383,16 @@ impl Battery {
         )
     }
 }
+
 #[pyclass(unsendable)]
+/// A battery assignment exposing charge level and instantaneous charge speed at timesteps.
 pub struct AssignedBattery {
     inner: RustAssignedBattery,
     start_timestamp: DateTime<Utc>,
 }
 #[pymethods]
 impl AssignedBattery {
+    /// Get charge level at a given DateTime<Utc>. Errors if out of range.
     fn get_charge_level(&self, time: DateTime<Utc>) -> PyResult<WattHour> {
         let time_converted = datetime_to_time(time, self.start_timestamp)?;
         if let Some(result) = self.inner.get_charge_level(time_converted) {
@@ -351,6 +403,7 @@ impl AssignedBattery {
             ))
         }
     }
+    /// Get charge speed (delta between timestep and next). Returns 0 at end-of-day.
     fn get_charge_speed(&self, time: DateTime<Utc>) -> PyResult<Watt> {
         let time_converted = datetime_to_time(time, self.start_timestamp)?;
         let next_time = time_converted.get_next_timestep();
@@ -376,24 +429,37 @@ impl AssignedBattery {
         let delta_charge = next_level - curr_level;
         Ok(Watt::from_milli_watt_hour_per_timestep(delta_charge as f64))
     }
+    /// Get battery ID.
     fn get_id(&self) -> u32 {
         self.inner.get_battery().get_id()
     }
 }
+
 #[pyclass(unsendable)]
+/// Builder holding prognoses and assets before solving.
+/// Add actions/batteries/prognoses, then convert to RustOptimizerContext for solving.
 struct OptimizerContext {
+    /// Electricity price prognoses: micro-euro per Wh (i64) internally.
     electricity_price: Prognoses<i64>,
+    /// Generated electricity prognoses: Wh/timestep (i64). Defaults to 0.
     generated_electricity: Prognoses<i64>,
+    /// Uncontrollable consumption prognoses: Wh/timestep (i64). Defaults to 0.
     beyond_control_consumption: Prognoses<i64>,
+    /// Batteries.
     batteries: Vec<Rc<RustBattery>>,
+    /// Constant actions.
     constant_actions: Vec<Rc<RustConstantAction>>,
+    /// Variable actions.
     variable_actions: Vec<Rc<RustVariableAction>>,
+    /// Reference start timestamp for conversions and first timestep fraction.
     start_time: DateTime<Utc>,
 }
 
 #[pymethods]
 impl OptimizerContext {
     #[new]
+    /// Create an OptimizerContext with electricity price prognoses provider.
+    /// Time is the reference start DateTime<Utc>. Other prognoses default to 0.
     fn new(
         py: Python<'_>,
         time: DateTime<Utc>,
@@ -412,11 +478,6 @@ impl OptimizerContext {
         let variable_actions = vec![];
         let start_time = time;
 
-        // let inner = RustOptimizerContext::new(electricity_price, generated_electricity, beyond_control_consumption, batteries, constant_actions, variable_actions, first_timestep_fraction)
-        // OptimizerContext {
-        //     inner,
-        //     start_timestamp,
-        // }
         Ok(OptimizerContext {
             electricity_price,
             generated_electricity,
@@ -427,6 +488,8 @@ impl OptimizerContext {
             start_time,
         })
     }
+
+    /// Add a constant action. Validates duration and timestep alignment.
     fn add_constant_action<'py>(
         &mut self,
         py: Python<'py>,
@@ -437,6 +500,7 @@ impl OptimizerContext {
         Ok(())
     }
 
+    /// Add a variable action. Validates timestep alignment.
     fn add_variable_action<'py>(
         &mut self,
         _py: Python<'py>,
@@ -446,10 +510,15 @@ impl OptimizerContext {
             .push(Rc::new(action.to_rust(self.start_time)?));
         Ok(())
     }
+
+    /// Add a battery.
     fn add_battery(&mut self, battery: &Battery) -> PyResult<()> {
         self.batteries.push(Rc::new(battery.to_rust()));
         Ok(())
     }
+
+    /// Add a constant action that already started before the context start_time.
+    /// Its remaining consumption is added to beyond_control_consumption until its end.
     fn add_past_constant_action<'py>(
         &mut self,
         _py: Python<'py>,
@@ -467,6 +536,8 @@ impl OptimizerContext {
         });
         Ok(())
     }
+
+    /// Add generated electricity prognoses via a provider. Values are summed with existing prognoses.
     fn add_generated_electricity_prognoses<'py>(
         &mut self,
         py: Python<'py>,
@@ -477,6 +548,7 @@ impl OptimizerContext {
     }
 }
 impl OptimizerContext {
+    /// Convert to RustOptimizerContext. Computes first_timestep_fraction from start_time alignment.
     fn to_rust(&self) -> PyResult<RustOptimizerContext> {
         // first_timestep fraction is the length of the first timestep that is remaining divided by full timestep length
         let first_timestep_fraction = {
@@ -501,12 +573,14 @@ impl OptimizerContext {
 }
 
 #[pyclass(unsendable)]
+/// Final schedule returned by the optimizer. Use accessors to retrieve assigned actions and batteries.
 pub struct Schedule {
     inner: RustSchedule,
     start_timestamp: DateTime<Utc>,
 }
 #[pymethods]
 impl Schedule {
+    /// Get an assigned constant action by ID, if present.
     fn get_constant_action(&self, id: u32) -> Option<AssignedConstantAction> {
         self.inner
             .get_constant_action(id)
@@ -515,6 +589,7 @@ impl Schedule {
                 start_timestamp: self.start_timestamp,
             })
     }
+    /// Get an assigned variable action by ID, if present.
     fn get_variable_action(&self, id: u32) -> Option<AssignedVariableAction> {
         self.inner
             .get_variable_action(id)
@@ -523,6 +598,7 @@ impl Schedule {
                 start_timestamp: self.start_timestamp,
             })
     }
+    /// Get an assigned battery by ID, if present.
     fn get_battery(&self, id: u32) -> Option<AssignedBattery> {
         self.inner.get_battery(id).map(|battery| AssignedBattery {
             inner: battery.clone(),
@@ -532,6 +608,8 @@ impl Schedule {
 }
 
 #[pyfunction]
+/// Run simulated annealing with a given OptimizerContext.
+/// Returns total cost in Euro and the resulting Schedule.
 fn run_simulated_annealing(
     _py: Python<'_>,
     context: &OptimizerContext,
@@ -549,6 +627,7 @@ fn run_simulated_annealing(
 }
 
 #[pymodule]
+/// Python module initializer. Registers units, classes, and functions.
 fn electricity_price_optimizer_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Register units submodule
     register_units_submodule(m)?;

@@ -1,4 +1,5 @@
 from api.orchestrator import router as orchestrator_router
+from api.example import router as example_router
 from fastapi import FastAPI
 import uvicorn
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ app = FastAPI()
 
 # Include the orchestrator router
 app.include_router(orchestrator_router)
+app.include_router(example_router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)

@@ -45,7 +45,7 @@ impl PrognosesProvider {
         PrognosesProvider { get_data }
     }
 }
-fn time_to_datetime(time: Time, start_time: DateTime<Utc>) -> DateTime<Utc> {
+fn time_to_datetime(time: Time, start_time: DateTime<Utc>) -> PyResult<DateTime<Utc>> {
     // 1. Get starting point in nanoseconds
     // .expect() is used here because Utc timestamps usually fit in i64 nanos
     // unless you're dealing with years far in the future/past.
@@ -67,9 +67,10 @@ fn time_to_datetime(time: Time, start_time: DateTime<Utc>) -> DateTime<Utc> {
 
     // 5. Ensure we don't round back to a time before the start_time
     let res_ns = rounded_ns.max(start_ns);
-
     // 6. Convert nanoseconds back into a DateTime object
-    Utc.timestamp_nanos(res_ns)
+    let result = Utc.timestamp_nanos(res_ns);
+
+    Ok(result)
 }
 fn check_on_timestep_boundary(dt: DateTime<Utc>) -> PyResult<()> {
     if (dt.minute() % MINUTES_PER_TIMESTEP) != 0
@@ -117,7 +118,7 @@ fn datetime_to_time(dt: DateTime<Utc>, start_time: DateTime<Utc>) -> Result<Time
     let timesteps = total_minutes / MINUTES_PER_TIMESTEP;
     let result = Time::from_timestep(timesteps);
     // check that converting back gives us the same datetime (i.e. that dt is on a timestep boundary)
-    let reverse = time_to_datetime(result, start_time);
+    let reverse = time_to_datetime(result, start_time)?;
     if reverse != dt {
         return Err(PyValueError::new_err(format!(
             "DateTime {dt} got converted to time {result:?} which converts back to {reverse}, expected {dt}. base_dt was {base_dt}",
@@ -133,8 +134,8 @@ impl PrognosesProvider {
         start_time: DateTime<Utc>,
     ) -> Result<Prognoses<T>, PyErr> {
         Prognoses::from_closure_result(|t: Time| {
-            let curr_t = time_to_datetime(t, start_time);
-            let next_t = time_to_datetime(t.get_next_timestep(), start_time);
+            let curr_t = time_to_datetime(t, start_time)?;
+            let next_t = time_to_datetime(t.get_next_timestep(), start_time)?;
             let result = self
                 .get_data
                 .call1(py, (curr_t, next_t))
@@ -223,10 +224,10 @@ pub struct AssignedConstantAction {
 }
 #[pymethods]
 impl AssignedConstantAction {
-    fn get_start_time(&self) -> DateTime<Utc> {
+    fn get_start_time(&self) -> PyResult<DateTime<Utc>> {
         time_to_datetime(self.inner.get_start_time(), self.start_timestamp)
     }
-    fn get_end_time(&self) -> DateTime<Utc> {
+    fn get_end_time(&self) -> PyResult<DateTime<Utc>> {
         time_to_datetime(self.inner.get_end_time(), self.start_timestamp)
     }
     fn get_id(&self) -> u32 {
@@ -458,7 +459,7 @@ impl OptimizerContext {
         action: &AssignedConstantAction,
     ) -> PyResult<()> {
         // find out how much time has passed since action start
-        let end_time = action.get_end_time();
+        let end_time = action.get_end_time()?;
         let end_time = datetime_to_time(end_time, self.start_time)?;
         self.beyond_control_consumption += Prognoses::from_closure(|t: Time| {
             if t >= end_time {
@@ -479,18 +480,18 @@ impl OptimizerContext {
     }
 }
 impl OptimizerContext {
-    fn to_rust(&self) -> RustOptimizerContext {
+    fn to_rust(&self) -> PyResult<RustOptimizerContext> {
         // first_timestep fraction is the length of the first timestep that is remaining divided by full timestep length
         let first_timestep_fraction = {
             let start_time = self.start_time;
-            let next_timestep = time_to_datetime(Time::from_timestep(1), start_time);
+            let next_timestep = time_to_datetime(Time::from_timestep(1), start_time)?;
             let remaining_duration = next_timestep.signed_duration_since(start_time);
             // calculate as precise as possible
             let remaining_nanos = remaining_duration.num_nanoseconds().unwrap() as f64;
             let full_timestep_nanos = (MINUTES_PER_TIMESTEP as i64 * 60 * 1_000_000_000) as f64;
             remaining_nanos / full_timestep_nanos
         };
-        RustOptimizerContext::new(
+        Ok(RustOptimizerContext::new(
             self.electricity_price.clone(),
             self.generated_electricity.clone(),
             self.beyond_control_consumption.clone(),
@@ -498,7 +499,7 @@ impl OptimizerContext {
             self.constant_actions.clone(),
             self.variable_actions.clone(),
             first_timestep_fraction as f32,
-        )
+        ))
     }
 }
 
@@ -548,7 +549,7 @@ fn run_simulated_annealing(
 ) -> PyResult<(Euro, Schedule)> {
     let rust_context = context.to_rust();
     let (cost, rust_schedule) =
-        electricity_price_optimizer::simulated_annealing::run_simulated_annealing(rust_context);
+        electricity_price_optimizer::simulated_annealing::run_simulated_annealing(rust_context?);
     Ok((
         Euro::from_nano_euro(cost as f64),
         Schedule {

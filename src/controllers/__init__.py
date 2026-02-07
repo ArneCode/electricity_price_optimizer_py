@@ -7,7 +7,7 @@ from .variable_action_controller import VariableActionController
 __all__ = [
     "DeviceController",
     "BatteryController",
-    # "GeneratorController",
+    "GeneratorController",
     "ConstantActionController",
     "VariableActionController",
 ]

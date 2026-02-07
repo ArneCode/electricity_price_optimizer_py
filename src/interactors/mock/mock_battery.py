@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from ..interfaces import BatteryInteractor
-from models.devices import Battery
 
 from electricity_price_optimizer_py import units
 
@@ -11,16 +10,16 @@ class MockBatteryInteractor(BatteryInteractor):
     
     def __init__(
         self,
-        battery_id: int,
+        id: int,
     ):
-        self._battery_id = battery_id
+        self._id = id
         self._charge = units.WattHour(0)
         self._current = units.Watt(0)
         self._last_update = datetime.now(timezone.utc)
 
     def set_current(self, current: units.Watt, device_manager: IDeviceManager) -> None:
         """Set the charge/discharge current in W."""
-        battery = device_manager.get_device_service().get_battery(self._battery_id)
+        battery = device_manager.get_device_service().get_battery(self._id)
 
         if current > 0:  # Charging: clamp to max_charge_rate
             self._current = min(battery.max_charge_rate, current)
@@ -46,7 +45,7 @@ class MockBatteryInteractor(BatteryInteractor):
         # Multiply Watt by timedelta -> WattHour (units wrapper implements this)
         energy_change = self._current * elapsed # can multiply with efficiency factor here if desired
 
-        battery = device_manager.get_device_service().get_battery(self._battery_id)
+        battery = device_manager.get_device_service().get_battery(self._id)
         
         # Update charge level with clamping
         self._charge =  max(units.WattHour(0),

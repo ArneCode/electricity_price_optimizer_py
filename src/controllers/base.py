@@ -22,16 +22,10 @@ class DeviceController(ABC):
     
     @property
     @abstractmethod
-    def device_id(self, device_manager: IDeviceManager) -> int:
+    def device_id(self) -> int:
         """Get the ID of the controlled device."""
         pass
-    
-    @property
-    @abstractmethod
-    def device_name(self, device_manager: IDeviceManager) -> str:
-        """Get the name of the controlled device."""
-        pass
-    
+
     @abstractmethod
     def use_schedule(self, schedule: Schedule, device_manager: IDeviceManager) -> None:
         """
@@ -67,15 +61,5 @@ class DeviceController(ABC):
         This method:
         1. Looks up the behavior for the device at the current time
         2. Instructs the device (via interactor) how to behave
-        """
-        pass
-    
-    @abstractmethod
-    def get_current_state(self, device_manager: IDeviceManager) -> dict:
-        """
-        Get the current state of the device.
-        
-        Returns:
-            Dictionary containing current device state
         """
         pass

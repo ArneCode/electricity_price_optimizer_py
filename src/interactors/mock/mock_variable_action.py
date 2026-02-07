@@ -1,7 +1,6 @@
 from datetime import datetime
 from ..interfaces import VariableActionInteractor
 
-from models.actions import VariableAction
 from electricity_price_optimizer_py import units
 
 from device_manager import IDeviceManager
@@ -11,9 +10,9 @@ class MockVariableActionInteractor(VariableActionInteractor):
     
     def __init__(
         self,
-        device_id: int,
+        id: int,
     ):
-        self._device_id = device_id
+        self._id = id
         self._current = units.Watt(0)
         self._total_consumed = units.WattHour(0)
         self._last_update = datetime.now()
@@ -23,7 +22,7 @@ class MockVariableActionInteractor(VariableActionInteractor):
         # Clamp to valid range
         # Use numeric values for clamping because unit objects don't support
         # Python's built-in min/max reliably across wrapper types.
-        action = device_manager.get_device_service().get_variable_action_device(self._device_id).actions[0]
+        action = device_manager.get_device_service().get_variable_action_device(self._id).actions[0]
         self._current = min(max(current, units.Watt(0)), action.max_consumption)
 
     def get_current(self, device_manager: IDeviceManager) -> units.Watt:

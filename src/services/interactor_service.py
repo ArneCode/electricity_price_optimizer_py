@@ -1,3 +1,11 @@
+"""Interactor service layer.
+
+Provides reader and writer interfaces and an in-memory implementation backed by
+RollbackMap for transactional staging (add/update/delete) with commit/rollback.
+
+Caveats:
+- Not suitable for multiprocessing due to shared state.
+"""
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -6,6 +14,7 @@ from uow.rollback_map import RollbackMap
 
 
 class IInteractorServiceReader(ABC):
+    """Read-only interactor service API."""
     @abstractmethod
     def get_battery_interactor(self, interactor_id: int) -> Optional[BatteryInteractor]:
         """Retrieve battery interactor details by ID."""
@@ -28,6 +37,7 @@ class IInteractorServiceReader(ABC):
 
 
 class IInteractorService(ABC, IInteractorServiceReader):
+    """Interactor service API with mutation operations."""
 
     @abstractmethod
     def add_battery_interactor(self, interactor: BatteryInteractor) -> int:
@@ -66,8 +76,9 @@ class IInteractorService(ABC, IInteractorServiceReader):
 
 
 class InteractorService(IInteractorService):
-    """Note: This implementation uses in-memory storage for interactors and a simple rollback mechanism. In a production environment, you would likely want to use a more robust solution, such as a database with transaction support or an event sourcing approach."
-    IMPORTANT: Does not work in multiprocessing environments due to shared state in RollbackMap. Consider using a different approach for concurrency.
+    """In-memory interactor store with transactional staging.
+
+    Uses RollbackMap for staging changes until commit. Rollback discards staged changes.
     """
     battery_interactors: RollbackMap[BatteryInteractor]
     generator_interactors: RollbackMap[GeneratorInteractor]

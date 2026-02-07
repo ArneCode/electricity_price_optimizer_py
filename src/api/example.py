@@ -1,3 +1,9 @@
+"""Example FastAPI endpoint demonstrating device deletion.
+
+DELETE /devices/{device_id}:
+- Uses DeviceManager dependency
+- Returns 204 on success, 404 if not found
+"""
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import get_device_manager

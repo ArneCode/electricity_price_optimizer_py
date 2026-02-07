@@ -1,3 +1,12 @@
+"""Transactional in-memory map with commit/rollback semantics.
+
+Intended for simple unit-of-work style staging:
+- set/delete operations are staged until commit
+- rollback clears staged changes
+- get reflects staged updates and hides staged deletions
+
+Not thread/multiprocess safe. Use a proper transactional store for multithreaded applications.
+"""
 from typing import TypeVar, Generic, Dict, Set, Optional
 
 # T represents the generic type of the object you're storing
@@ -5,6 +14,16 @@ T = TypeVar('T')
 
 
 class RollbackMap(Generic[T]):
+    """A map supporting transactional staging (set/delete) with commit/rollback.
+
+    Semantics:
+    - get: returns staged value if present, None if staged for deletion, otherwise committed value
+    - set: stages an addition or update
+    - delete: stages removal (only tracked if key exists in committed state)
+    - commit: applies staged changes to committed state and clears staging
+    - rollback: clears staging without changing committed state
+    """
+
     def __init__(self):
         # The "source of truth"
         self._committed_state: Dict[int, T] = {}
@@ -37,7 +56,7 @@ class RollbackMap(Generic[T]):
             self._staged_deletions.add(key)
 
     def commit(self) -> None:
-        """O(K) where K is the number of changes since last commit."""
+        """O(K) where K is the number of staged changes since last commit."""
         # Apply additions/updates
         self._committed_state.update(self._staged_changes)
 
@@ -48,12 +67,12 @@ class RollbackMap(Generic[T]):
         self.rollback()  # Clear the buffers
 
     def rollback(self) -> None:
-        """O(1) - Simply wipes the staged buffers."""
+        """O(1): Wipes the staged buffers."""
         self._staged_changes.clear()
         self._staged_deletions.clear()
 
     def __repr__(self) -> str:
-        # Merges view for debugging/printing
+        """Debug view merging committed and staged state (excluding staged deletions)."""
         current = self._committed_state.copy()
         current.update(self._staged_changes)
         for k in self._staged_deletions:

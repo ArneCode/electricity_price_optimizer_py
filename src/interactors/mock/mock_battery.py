@@ -9,28 +9,23 @@ class MockBatteryInteractor(BatteryInteractor):
     
     def __init__(
         self,
-        battery: Battery,
-
+        battery_id: int,
     ):
-        self.battery = battery
+        self._battery_id = battery_id
         self._charge = units.WattHour(0)
         self._current = units.Watt(0)
         self._last_update = datetime.now(timezone.utc)
 
-    def set_current(self, current: units.Watt) -> None:
+    def set_current(self, current: units.Watt, device_manager: DeviceManager) -> None:
         """Set the charge/discharge current in W."""
         # Clamp to valid range
         # Work with raw numeric values to avoid relying on ordering for unit wrappers
-        cur_val = getattr(current, "value", float(current))
-        max_charge = getattr(self.battery.maximum_charge_rate, "value", float(self.battery.maximum_charge_rate))
-        max_discharge = getattr(self.battery.maximum_output_rate, "value", float(self.battery.maximum_output_rate))
+        battery = device_manager.get_battery(self._battery_id)
 
-        if cur_val > 0:
-            clamped = min(cur_val, max_charge)
-        else:
-            clamped = max(cur_val, -max_discharge)
-
-        self._current = units.Watt(clamped)
+        if current > 0:  # Charging: clamp to max_charge_rate
+            self._current = min(battery.max_charge_rate, current)
+        else:            # Discharging: clamp to max_discharge_rate (negative)
+            self._current = max(-battery.max_discharge_rate, current)
     
     def get_charge(self) -> units.WattHour:
         """Get the current charge level in Wh."""

@@ -22,7 +22,7 @@ class ConstantActionController(DeviceController):
         self._schedule: "Optional[Schedule]" = None
 
     @property
-    def id(self) -> "int":
+    def device_id(self) -> "int":
         return self._id
 
     @property

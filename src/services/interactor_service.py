@@ -37,7 +37,7 @@ class IInteractorServiceReader(ABC):
         ...
 
 
-class IInteractorService(ABC, IInteractorServiceReader):
+class IInteractorService(IInteractorServiceReader):
     """Interactor service API with mutation operations."""
 
     @abstractmethod
@@ -105,20 +105,20 @@ class InteractorService(IInteractorService):
         return self.variable_action_interactors.get(interactor_id)
 
     def add_battery_interactor(self, interactor: "BatteryInteractor") -> "int":
-        self.battery_interactors.set(interactor.id, interactor)
-        return interactor.id
+        self.battery_interactors.set(interactor.device_id, interactor)
+        return interactor.device_id
 
     def add_generator_interactor(self, interactor: "GeneratorInteractor") -> "int":
-        self.generator_interactors.set(interactor.id, interactor)
-        return interactor.id
+        self.generator_interactors.set(interactor.device_id, interactor)
+        return interactor.device_id
 
     def add_constant_action_interactor(self, interactor: "ConstantActionInteractor") -> "int":
-        self.constant_action_interactors.set(interactor.id, interactor)
-        return interactor.id
+        self.constant_action_interactors.set(interactor.device_id, interactor)
+        return interactor.device_id
 
     def add_variable_action_interactor(self, interactor: "VariableActionInteractor") -> "int":
-        self.variable_action_interactors.set(interactor.id, interactor)
-        return interactor.id
+        self.variable_action_interactors.set(interactor.device_id, interactor)
+        return interactor.device_id
 
     def remove_interactor(self, interactor_id: "int") -> "None":
         self.battery_interactors.delete(interactor_id)
@@ -131,3 +131,9 @@ class InteractorService(IInteractorService):
         self.generator_interactors.rollback()
         self.constant_action_interactors.rollback()
         self.variable_action_interactors.rollback()
+
+    def commit(self) -> "None":
+        self.battery_interactors.commit()
+        self.generator_interactors.commit()
+        self.constant_action_interactors.commit()
+        self.variable_action_interactors.commit()

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 from electricity_price_optimizer_py import Schedule, OptimizerContext, PrognosesProvider, run_simulated_annealing
 from electricity_price_optimizer_py.units import EuroPerWh
-from datetime import datetime
+from datetime import datetime, timezone
 
 if TYPE_CHECKING:
     from device_manager import IDeviceManager
@@ -36,11 +36,11 @@ class OrchestratorService(IOrchestratorService):
 
     def run_optimization(self, device_manager: "IDeviceManager") -> "None":
         """Run the optimization algorithm."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # Create a simple context with mock price data for demonstration
-        price_provider = PrognosesProvider[EuroPerWh](
-            lambda t: EuroPerWh(0.20)  # Mock constant price of 0.20 €/Wh
+        price_provider = PrognosesProvider(
+            lambda t1, t2: EuroPerWh(0.20)  # Mock constant price of 0.20 €/Wh
         )
         context = OptimizerContext(
             time=now,

@@ -3,8 +3,9 @@ import math
 from ..interfaces import GeneratorInteractor
 
 from electricity_price_optimizer_py import units
-
-from device_manager import IDeviceManager
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from device_manager import IDeviceManager
 
 
 class MockGeneratorInteractor(GeneratorInteractor):
@@ -16,15 +17,15 @@ class MockGeneratorInteractor(GeneratorInteractor):
     """
 
     def __init__(
-            self, 
-            id: int
-        ):
-        self.id = id
+        self,
+        id: "int"
+    ):
+        self._id = id
         self._max_power = None
         self._current_power = units.Watt(0)
         self._simulated_override = None  # if set, this value is used directly
 
-    def get_current(self, device_manager: IDeviceManager) -> units.Watt:
+    def get_current(self, device_manager: "IDeviceManager") -> "units.Watt":
         """Get the current power generation in W.
 
         Reads from simulated override if set; otherwise returns last computed
@@ -33,7 +34,7 @@ class MockGeneratorInteractor(GeneratorInteractor):
         """
         return self._current_power
 
-    def set_simulated_power(self, power: units.Watt, device_manager: IDeviceManager = None) -> None:
+    def set_simulated_power(self, power: "units.Watt", device_manager: "IDeviceManager" = None) -> None:
         """Set the simulated power output (for testing). Clamped to max_power."""
         # If max power is available, clamp; otherwise accept as-is
         if self._max_power is not None and self._max_power != units.Watt(0):
@@ -44,7 +45,7 @@ class MockGeneratorInteractor(GeneratorInteractor):
             self._current_power = units.Watt(power)
         self._simulated_override = self._current_power
 
-    def update(self, current_time: datetime, device_manager: IDeviceManager) -> None:
+    def update(self, current_time: "datetime", device_manager: "IDeviceManager") -> None:
         """Update internal power estimate using a very simple solar model.
 
         If a simulated override was set via set_simulated_power, the override
@@ -86,3 +87,7 @@ class MockGeneratorInteractor(GeneratorInteractor):
                 max_p = 0
 
         self._current_power = units.Watt(max_p * solar_factor * weather_factor)
+
+    @property
+    def device_id(self) -> "int":
+        return self._id

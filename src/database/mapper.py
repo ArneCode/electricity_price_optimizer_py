@@ -7,7 +7,7 @@ class WattMapper(TypeDecorator):
 
     def process_bind_param(self, value: Watt | None, dialect):
         if value is not None:
-            return float(value)
+            return value.get_value()
         return None
 
     def process_result_value(self, value: float | None, dialect):
@@ -21,7 +21,7 @@ class WattHourMapper(TypeDecorator):
 
     def process_bind_param(self, value: WattHour | None, dialect):
         if value is not None:
-            return float(value)
+            return value.get_value()
         return None
 
     def process_result_value(self, value: float | None, dialect):
@@ -35,7 +35,7 @@ class EuroMapper(TypeDecorator):
 
     def process_bind_param(self, value: Euro | None, dialect):
         if value is not None:
-            return float(value)
+            return value.get_value()
         return None
 
     def process_result_value(self, value: float | None, dialect):
@@ -49,7 +49,7 @@ class EuroPerWhMapper(TypeDecorator):
 
     def process_bind_param(self, value: EuroPerWh | None, dialect):
         if value is not None:
-            return float(value)
+            return value.get_value()
         return None
 
     def process_result_value(self, value: float | None, dialect):

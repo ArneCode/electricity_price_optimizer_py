@@ -42,7 +42,7 @@ class IControllerServiceReader(ABC):
         ...
 
 
-class IControllerService(ABC):
+class IControllerService(IControllerServiceReader):
     """Controller service API with mutation operations."""
     @abstractmethod
     def add_battery_controller(self, controller: BatteryController) -> int:

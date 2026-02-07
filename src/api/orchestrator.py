@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, status
 from api.dependencies import get_device_manager
 from device_manager import IDeviceManager
@@ -25,11 +25,13 @@ def test_orchestrator(manager: IDeviceManager = Depends(get_device_manager)) -> 
     manager.add_battery(battery)
 
     # 2) Constant action device with one action
+
+    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     cad = ConstantActionDevice(name="Washer")
     cad.actions.append(
         ConstantAction(
-            start_from=datetime.now(),
-            end_before=datetime.now() + timedelta(hours=6),
+            start_from=now,
+            end_before=now + timedelta(hours=6),
             duration=timedelta(hours=2),
             consumption=Watt(300.0),
             # ...existing code...
@@ -41,8 +43,8 @@ def test_orchestrator(manager: IDeviceManager = Depends(get_device_manager)) -> 
     vad = VariableActionDevice(name="EV Charger")
     vad.actions.append(
         VariableAction(
-            start=datetime.now(),
-            end=datetime.now() + timedelta(hours=8),
+            start=now,
+            end=now + timedelta(hours=8),
             total_consumption=WattHour(7000.0),
             max_consumption=Watt(2000.0),
             # ...existing code...

@@ -6,6 +6,9 @@ All operations occur within the provided Unit of Work context.
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from interactors.mock import MockConstantActionInteractor, MockBatteryInteractor, MockGeneratorInteractor, MockVariableActionInteractor
+from controllers import ConstantActionController, VariableActionController, BatteryController, GeneratorController
+
 if TYPE_CHECKING:
     from device import Battery, VariableActionDevice, Generator, ConstantActionDevice
     from services.controller_service import IControllerServiceReader
@@ -65,33 +68,33 @@ class DeviceManager(IDeviceManager):
     def add_battery(self, device: "Battery") -> "int":
         id = self._uow.device_service.add_device(device)
         self._uow.interactor_service.add_battery_interactor(
-            device.to_battery_interactor())
+            MockBatteryInteractor(device.id))
         self._uow.controller_service.add_battery_controller(
-            device.to_battery_controller())
+            BatteryController(device.id))
         return id
 
     def add_generator(self, device: "Generator") -> "int":
         id = self._uow.device_service.add_device(device)
         self._uow.interactor_service.add_generator_interactor(
-            device.to_generator_interactor())
+            MockGeneratorInteractor(device.id))
         self._uow.controller_service.add_generator_controller(
-            device.to_generator_controller())
+            GeneratorController(device.id))
         return id
 
     def add_constant_action_device(self, device: "ConstantActionDevice") -> "int":
         id = self._uow.device_service.add_device(device)
         self._uow.interactor_service.add_constant_action_interactor(
-            device.to_constant_action_interactor())
+            MockConstantActionInteractor(device.id))
         self._uow.controller_service.add_constant_action_controller(
-            device.to_constant_action_controller())
+            ConstantActionController(device.id))
         return id
 
     def add_variable_action_device(self, device: "VariableActionDevice") -> "int":
         id = self._uow.device_service.add_device(device)
         self._uow.interactor_service.add_variable_action_interactor(
-            device.to_variable_action_interactor())
+            MockVariableActionInteractor(device.id))
         self._uow.controller_service.add_variable_action_controller(
-            device.to_variable_action_controller())
+            VariableActionController(device.id))
         return id
 
     def remove_device(self, device_id: "int") -> "None":

@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from device_manager import IDeviceManager
+if TYPE_CHECKING:
+    from device_manager import IDeviceManager
 
 from .base import DeviceController
 from interactors import BatteryInteractor
@@ -25,21 +26,21 @@ class BatteryController(DeviceController):
 
     def __init__(
         self,
-        id: int,
+        id: "int",
     ):
 
         self._id = id
-        self._schedule: Optional[Schedule] = None
+        self._schedule: "Optional[Schedule]" = None
 
     @property
-    def device_id(self) -> int:
-        return self.id
+    def device_id(self) -> "int":
+        return self._id
 
-    def use_schedule(self, schedule: Schedule, device_manager: IDeviceManager) -> None:
+    def use_schedule(self, schedule: "Schedule", device_manager: "IDeviceManager") -> None:
         """Store the schedule for later use when updating the device."""
         self._schedule = schedule
 
-    def add_to_optimizer_context(self, context: OptimizerContext, current_time: datetime, device_manager: IDeviceManager) -> None:
+    def add_to_optimizer_context(self, context: "OptimizerContext", current_time: "datetime", device_manager: "IDeviceManager") -> None:
         """
         Add battery information to the optimizer context.
 
@@ -63,7 +64,7 @@ class BatteryController(DeviceController):
         )
         context.add_battery(optimizer_battery)
 
-    def update_device(self, current_time: datetime, device_manager: IDeviceManager) -> None:
+    def update_device(self, current_time: "datetime", device_manager: "IDeviceManager") -> None:
         """
         Update the battery based on the current schedule.
 

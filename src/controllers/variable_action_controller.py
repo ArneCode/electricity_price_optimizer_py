@@ -26,7 +26,7 @@ class VariableActionController(DeviceController):
         self._schedule: "Optional[Schedule]" = None
 
     @property
-    def id(self) -> "int":
+    def device_id(self) -> "int":
         return self._id
 
     def use_schedule(self, schedule: "Schedule", device_manager: "IDeviceManager") -> "None":
@@ -39,7 +39,7 @@ class VariableActionController(DeviceController):
         interactor = device_manager.get_interactor_service(
         ).get_variable_action_interactor(self._id)
 
-        if interactor.get_total_consumed() >= action.total_consumption:
+        if interactor.get_total_consumed(device_manager) >= action.total_consumption:
             return  # already fully consumed, no need to add to context
 
         if action is None:

@@ -16,7 +16,19 @@ from instances import controller_service_instance, interactor_service_instance, 
 from device_manager import IDeviceManager, DeviceManager
 
 
-def get_uow() -> Generator[IUnitOfWork, None, None]:
+def get_controller_service() -> IControllerService:
+    """Return the application-scoped controller service singleton."""
+    return controller_service_instance
+
+
+def get_interactor_service() -> IInteractorService:
+    """Return the application-scoped interactor service singleton."""
+    return interactor_service_instance
+
+
+def get_uow(interactor_service=Depends(get_interactor_service),
+            controller_service=Depends(get_controller_service)
+            ) -> Generator[IUnitOfWork, None, None]:
     """Yield a Unit of Work (UoW) scoped to the request.
 
     Behavior:
@@ -32,19 +44,10 @@ def get_uow() -> Generator[IUnitOfWork, None, None]:
     - The commit/rollback for interactor/controller services delegates to in-memory RollbackMap.
     - Database transaction management is handled by the UoW using the underlying Session.
     """
-    uow = SqlAlchemyUnitOfWork(SessionLocal)
+    uow = SqlAlchemyUnitOfWork(
+        SessionLocal, interactor_service, controller_service)
     with uow:
         yield uow
-
-
-def get_controller_service() -> IControllerService:
-    """Return the application-scoped controller service singleton."""
-    return controller_service_instance
-
-
-def get_interactor_service() -> IInteractorService:
-    """Return the application-scoped interactor service singleton."""
-    return interactor_service_instance
 
 
 def get_orchestrator_service() -> IOrchestratorService:
@@ -55,13 +58,9 @@ def get_orchestrator_service() -> IOrchestratorService:
 
 
 def get_device_manager(
-    interactor_service: IInteractorService = Depends(get_interactor_service),
-    controller_service: IControllerService = Depends(get_controller_service),
     uow: IUnitOfWork = Depends(get_uow),
 ) -> IDeviceManager:
     """Compose a DeviceManager using DI-provided services and the current UoW."""
     return DeviceManager(
-        interactor_service=interactor_service,
-        controller_service=controller_service,
         uow=uow,
     )

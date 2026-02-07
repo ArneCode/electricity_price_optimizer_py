@@ -10,9 +10,7 @@ Notes:
 from abc import ABC, abstractmethod
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from device import Device, Battery, Generator, ConstantActionDevice, VariableActionDevice
+from device import Device, Battery, Generator, ConstantActionDevice, VariableActionDevice
 
 
 class IDeviceServiceReader(ABC):
@@ -94,7 +92,7 @@ class IDeviceServiceReader(ABC):
         ...
 
 
-class IDeviceService(ABC, IDeviceServiceReader):
+class IDeviceService(IDeviceServiceReader):
     """Device service API with mutation operations."""
     @abstractmethod
     def add_device(self, device: "Device") -> "int":

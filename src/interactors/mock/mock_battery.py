@@ -44,7 +44,7 @@ class MockBatteryInteractor(BatteryInteractor):
             return
 
         # Multiply Watt by timedelta -> WattHour (units wrapper implements this)
-        energy_change = self._current * elapsed
+        energy_change = self._current * elapsed # can multiply with efficiency factor here if desired
 
         battery = device_manager.get_device_service().get_battery(self._battery_id)
         
